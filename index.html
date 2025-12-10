@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>taylor.ai - AI Fashion Assistant</title>
+  <link rel="icon" href="visuals/favicon.png" type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    * {
+      font-family: 'Inter', sans-serif;
+    }
+    body {
+      background-color: #ffffff !important;
+    }
+    #welcome-section {
+      transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+    }
+  </style>
+</head>
+
+<body class="bg-white h-screen" style="background-color: #ffffff !important;">
+  
+  <!-- Check if already logged in -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNs9nRygrXR0MaYosEYQeKxcpJHFgVzKo",
+      authDomain: "taylor-2680b.firebaseapp.com",
+      projectId: "taylor-2680b",
+      storageBucket: "taylor-2680b.firebasestorage.app",
+      messagingSenderId: "451921468175",
+      appId: "1:451921468175:web:6fa08eeae41caa6da1bc7a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // If user is already logged in, redirect to chat
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('✅ User already logged in, redirecting to chat...');
+        window.location.href = 'chat.html';
+      }
+    });
+  </script>
+
+  <!-- Initial Welcome Message -->
+  <div id="welcome-section" class="flex items-center justify-center h-screen">
+    <div class="text-center transform -translate-y-8">
+      <h1 class="text-2xl font-medium mb-4" style="color: #2D5A3D;">welcome to taylor.ai</h1>
+      <h2 class="text-gray-900 text-4xl font-light">Where you dont find clothes, the clothes find you</h2>
+    </div>
+  </div>
+
+  <!-- Bottom Auth Buttons -->
+  <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-md px-6">
+    <div class="bg-white rounded-2xl px-6 py-6 border border-gray-200 shadow-lg">
+      <p class="text-center text-gray-600 mb-6 text-sm">Get started with your AI fashion assistant</p>
+      
+      <!-- Sign Up and Sign In Buttons -->
+      <div class="flex flex-col space-y-3">
+        <a href="auth.html?mode=signup" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 p-3 rounded-full font-semibold transition shadow-sm hover:shadow-md text-center">
+          Sign Up
+        </a>
+        <a href="auth.html?mode=signin" class="w-full bg-white border-2 border-green-500 text-green-600 hover:bg-green-50 p-3 rounded-full font-semibold transition text-center">
+          Sign In
+        </a>
+      </div>
+      
+      <p class="text-center text-gray-500 text-xs mt-4">No credit card required • Free forever</p>
+    </div>
+  </div>
+
+</body>
+</html>

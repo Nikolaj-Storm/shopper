@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-white">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>taylor.ai - Authentication</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .taylor-green { color: #2D5A3D; }
+    </style>
+</head>
+<body class="h-full flex items-center justify-center text-gray-800 p-4 bg-gray-50">
+    <div class="w-full max-w-md">
+        <h1 class="text-4xl font-bold text-center mb-6 taylor-green">taylor.ai</h1>
+
+        <div class="bg-white p-8 rounded-lg border border-gray-200 shadow-lg">
+            
+            <!-- Sign Up View -->
+            <div id="signup-view">
+                <h2 class="text-2xl font-semibold text-gray-900 text-center mb-6">Create Your Account</h2>
+                
+                <!-- Email & Password -->
+                <div class="space-y-4 mb-6">
+                    <input type="email" id="signup-email" placeholder="Email" class="w-full bg-gray-100 text-gray-900 p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <input type="password" id="signup-password" placeholder="Password (6+ characters)" class="w-full bg-gray-100 text-gray-900 p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <!-- Photo Upload Section (REQUIRED) -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Upload Your Photo <span class="text-red-500">*</span>
+                    </label>
+                    
+                    <div id="photo-upload-zone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-green-500 transition">
+                        <svg class="w-10 h-10 mx-auto text-gray-400 mb-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        <p class="text-gray-700 text-sm font-medium">Click to upload your photo</p>
+                        <p class="text-gray-500 text-xs mt-1">PNG, JPG up to 10MB</p>
+                    </div>
+                    
+                    <input type="file" id="photo-input-signup" accept="image/*" class="hidden">
+                    
+                    <div id="photo-preview" class="hidden mt-4">
+                        <img id="preview-img" class="w-full h-32 object-cover rounded-lg border-2 border-green-500 mb-2">
+                        <p id="preview-filename" class="text-sm text-gray-600 text-center"></p>
+                        <button id="remove-photo-btn" class="text-red-500 text-sm hover:underline mt-1 block mx-auto">Remove photo</button>
+                    </div>
+                </div>
+
+                <!-- Sign Up Button -->
+                <button id="signup-btn" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 p-3 rounded-md font-semibold transition shadow-sm hover:shadow-md">
+                    Create Account
+                </button>
+                
+                <p id="signup-error" class="text-red-500 text-center mt-4 h-5 text-sm"></p>
+                <p id="signup-status" class="text-center mt-2 h-5 text-sm"></p>
+                
+                <p class="text-center mt-4 text-sm text-gray-600">
+                    Already have an account? 
+                    <a href="#" id="show-login-link" class="font-semibold text-emerald-600 hover:underline">Sign In</a>
+                </p>
+            </div>
+
+            <!-- Sign In View -->
+            <div id="login-view" class="hidden">
+                <h2 class="text-2xl font-semibold text-gray-900 text-center mb-6">Welcome Back!</h2>
+                <div class="space-y-4">
+                    <input type="email" id="login-email" placeholder="Email" class="w-full bg-gray-100 text-gray-900 p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <input type="password" id="login-password" placeholder="Password" class="w-full bg-gray-100 text-gray-900 p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="mt-6">
+                     <button id="login-btn" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 p-3 rounded-md font-semibold transition shadow-sm hover:shadow-md">Sign In</button>
+                </div>
+                 <p id="login-error" class="text-red-500 text-center mt-4 h-5"></p>
+                <p class="text-center mt-4 text-sm text-gray-600">
+                    Don't have an account? 
+                    <a href="#" id="show-signup-link" class="font-semibold text-emerald-600 hover:underline">Sign Up</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const firebaseConfig = {
+            apiKey: "AIzaSyDNs9nRygrXR0MaYosEYQeKxcpJHFgVzKo",
+            authDomain: "taylor-2680b.firebaseapp.com",
+            projectId: "taylor-2680b",
+            storageBucket: "taylor-2680b.firebasestorage.app",
+            messagingSenderId: "451921468175",
+            appId: "1:451921468175:web:6fa08eeae41caa6da1bc7a"
+        };
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        const signupView = document.getElementById('signup-view');
+        const loginView = document.getElementById('login-view');
+        const photoUploadZone = document.getElementById('photo-upload-zone');
+        const photoInputSignup = document.getElementById('photo-input-signup');
+        const photoPreview = document.getElementById('photo-preview');
+        const previewImg = document.getElementById('preview-img');
+        const previewFilename = document.getElementById('preview-filename');
+        const signupBtn = document.getElementById('signup-btn');
+        const signupError = document.getElementById('signup-error');
+        const signupStatus = document.getElementById('signup-status');
+        
+        let uploadedPhotoFile = null;
+        let isSigningUp = false; // NEW: Flag to prevent early redirect
+
+        // Check URL params to determine view
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+        if (mode === 'signin') {
+            signupView.classList.add('hidden');
+            loginView.classList.remove('hidden');
+        }
+
+        // Toggle views
+        document.getElementById('show-login-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            signupView.classList.add('hidden');
+            loginView.classList.remove('hidden');
+        });
+
+        document.getElementById('show-signup-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            loginView.classList.add('hidden');
+            signupView.classList.remove('hidden');
+        });
+
+        // Check if already logged in - UPDATED: Don't redirect during signup
+        onAuthStateChanged(auth, user => {
+            if (user && !isSigningUp) {
+                console.log('✅ User already logged in, redirecting...');
+                window.location.href = 'chat.html';
+            }
+        });
+
+        // Photo Upload
+        photoUploadZone.addEventListener('click', () => photoInputSignup.click());
+        
+        photoInputSignup.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                uploadedPhotoFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImg.src = e.target.result;
+                    previewFilename.textContent = file.name;
+                    photoPreview.classList.remove('hidden');
+                    photoUploadZone.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+                console.log('📸 Photo selected:', file.name);
+            }
+        });
+
+        // Remove photo
+        document.getElementById('remove-photo-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            uploadedPhotoFile = null;
+            photoPreview.classList.add('hidden');
+            photoUploadZone.classList.remove('hidden');
+            photoInputSignup.value = '';
+        });
+
+        // Sign Up - PHOTO REQUIRED
+        signupBtn.addEventListener('click', async () => {
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+            
+            signupError.textContent = '';
+            signupStatus.textContent = '';
+            
+            // Validation
+            if (!email || !password) {
+                signupError.textContent = 'Please enter both email and password';
+                return;
+            }
+            if (password.length < 6) {
+                signupError.textContent = 'Password must be at least 6 characters';
+                return;
+            }
+            if (!uploadedPhotoFile) {
+                signupError.textContent = '⚠️ Please upload your photo to continue';
+                return;
+            }
+            
+            isSigningUp = true; // NEW: Set flag to prevent early redirect
+            signupBtn.disabled = true;
+            signupBtn.textContent = 'Creating Account...';
+            signupStatus.className = 'text-center mt-2 h-5 text-sm text-blue-600';
+            signupStatus.textContent = '⏳ Creating your account...';
+            
+            try {
+                console.log('🚀 Step 1: Creating Firebase user...');
+                console.log('📧 Email:', email);
+                console.log('📸 Photo file:', uploadedPhotoFile.name, uploadedPhotoFile.size, 'bytes');
+                
+                // 1. Create Firebase user account
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                console.log('✅ User created:', user.uid);
+                signupStatus.textContent = '📤 Uploading your photo to Firebase Storage...';
+                
+                // 2. Upload photo to Firebase Storage
+                const timestamp = Date.now();
+                const fileName = `profile_${timestamp}.jpg`;
+                const storagePath = `user_images/${user.uid}/${fileName}`;
+                const storageRef = ref(storage, storagePath);
+                
+                console.log('📤 Uploading to path:', storagePath);
+                console.log('📤 Storage bucket:', storage.app.options.storageBucket);
+                
+                const snapshot = await uploadBytes(storageRef, uploadedPhotoFile);
+                console.log('✅ Upload successful! Snapshot:', snapshot);
+                console.log('✅ Full path:', snapshot.ref.fullPath);
+                
+                const profileImageUrl = await getDownloadURL(snapshot.ref);
+                console.log('✅ Download URL obtained:', profileImageUrl);
+                
+                signupStatus.textContent = '🎨 Generating your reference image (30-60 sec)...';
+                
+                // NEW: Generate reference image via API
+                const formData = new FormData();
+                formData.append('file', uploadedPhotoFile);
+                
+                console.log('🎨 Calling /generate-reference API...');
+                const refResponse = await fetch('https://stylo-ai.onrender.com/api/generate-reference', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!refResponse.ok) {
+                    throw new Error(`Reference generation failed: ${refResponse.status}`);
+                }
+                
+                const refData = await refResponse.json();
+                const referenceImageFilename = refData.reference_image;
+                console.log('✅ Reference image generated:', referenceImageFilename);
+                
+                signupStatus.textContent = '💾 Saving your profile to Firestore...';
+                
+                // 3. Save user data to Firestore (with BOTH images)
+                const userDoc = {
+                    email: user.email,
+                    profileImageUrl: profileImageUrl, // Original uploaded photo
+                    referenceImageFilename: referenceImageFilename, // Generated reference
+                    createdAt: new Date().toISOString()
+                };
+                
+                console.log('💾 Saving to Firestore:', userDoc);
+                
+                await setDoc(doc(db, "users", user.uid), userDoc);
+                
+                console.log('✅ Profile saved to Firestore!');
+                
+                signupStatus.className = 'text-center mt-2 h-5 text-sm text-green-600';
+                signupStatus.textContent = '✅ Account created successfully! Redirecting...';
+                
+                // 4. Redirect to chat
+                setTimeout(() => {
+                    isSigningUp = false;
+                    window.location.href = 'chat.html';
+                }, 1500);
+                
+            } catch (error) {
+                isSigningUp = false; // NEW: Clear flag on error
+                
+                console.error('❌ ERROR DETAILS:');
+                console.error('  - Error object:', error);
+                console.error('  - Error code:', error.code);
+                console.error('  - Error message:', error.message);
+                console.error('  - Error stack:', error.stack);
+                
+                // User-friendly error messages
+                if (error.code === 'storage/unauthorized') {
+                    signupError.textContent = '❌ Firebase Storage permission denied. Check Storage rules!';
+                } else if (error.code === 'storage/canceled') {
+                    signupError.textContent = '❌ Upload canceled. Please try again.';
+                } else if (error.code === 'storage/unknown') {
+                    signupError.textContent = '❌ Upload failed. Check your internet connection.';
+                } else if (error.code === 'auth/email-already-in-use') {
+                    signupError.textContent = '❌ Email already in use. Try signing in instead.';
+                } else if (error.code === 'permission-denied') {
+                    signupError.textContent = '❌ Firestore permission denied. Check Firestore rules!';
+                } else {
+                    signupError.textContent = `❌ Error: ${error.message}`;
+                }
+                
+                signupStatus.textContent = '';
+                signupBtn.disabled = false;
+                signupBtn.textContent = 'Create Account';
+            }
+        });
+
+        // Login
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const error = document.getElementById('login-error');
+            
+            error.textContent = '';
+            if (!email || !password) {
+                error.textContent = 'Please enter both email and password';
+                return;
+            }
+            
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true;
+            btn.textContent = 'Signing In...';
+            
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // Will redirect via onAuthStateChanged
+            } catch (err) {
+                error.textContent = err.code === 'auth/user-not-found' ? 'No account found' : 
+                                   err.code === 'auth/wrong-password' ? 'Incorrect password' : 
+                                   err.code === 'auth/invalid-credential' ? 'Invalid email or password' :
+                                   err.message;
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
+            }
+        }
+        
+        document.getElementById('login-btn').addEventListener('click', handleLogin);
+        document.getElementById('login-email').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+        document.getElementById('login-password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+
+        // Enter key for signup
+        document.getElementById('signup-email').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('signup-password').focus();
+        });
+        document.getElementById('signup-password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                if (uploadedPhotoFile) {
+                    signupBtn.click();
+                } else {
+                    photoUploadZone.click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

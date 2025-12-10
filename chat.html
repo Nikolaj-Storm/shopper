@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat with taylor.ai</title>
+  <link rel="icon" href="visuals/favicon.png" type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    * {
+      font-family: 'Inter', sans-serif;
+    }
+    body {
+      background-color: #ffffff !important;
+    }
+    .message {
+      opacity: 0;
+      transform: translateX(-30px);
+      transition: all 0.4s ease-out;
+    }
+    .message.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    
+    /* Popup/Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-overlay.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background-color: #ffffff;
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 700px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #2D5A3D;
+      padding-bottom: 15px;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      color: #888;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-close:hover {
+      color: #333;
+    }
+    
+    .product-item {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      transition: box-shadow 0.3s;
+    }
+    
+    .product-item:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .product-thumbnail {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-right: 15px;
+    }
+    
+    .product-details {
+      flex-grow: 1;
+    }
+    
+    .product-brand {
+      font-weight: 600;
+      color: #2D5A3D;
+      margin-bottom: 5px;
+    }
+    
+    .product-link-btn {
+      background-color: #2D5A3D;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 14px;
+      transition: background-color 0.3s;
+      display: inline-block;
+    }
+    
+    .product-link-btn:hover {
+      background-color: #1e3d2f;
+    }
+    
+    .done-button {
+      position: fixed;
+      bottom: 90px;
+      right: 30px;
+      background: linear-gradient(135deg, #2D5A3D, #3a7254);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(45, 90, 61, 0.3);
+      transition: all 0.3s;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .done-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(45, 90, 61, 0.4);
+    }
+    
+    .done-button.hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body class="bg-white h-screen" style="background-color: #ffffff !important;">
+  
+  <!-- Firebase Authentication Protection -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNs9nRygrXR0MaYosEYQeKxcpJHFgVzKo",
+      authDomain: "taylor-2680b.firebaseapp.com",
+      projectId: "taylor-2680b",
+      storageBucket: "taylor-2680b.firebasestorage.app",
+      messagingSenderId: "451921468175",
+      appId: "1:451921468175:web:6fa08eeae41caa6da1bc7a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // CHANGE: Attach to window to make it globally accessible
+    window.userReferenceImage = null;
+
+    // Protect this page
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        console.log('⚠️ No user authenticated, redirecting...');
+        window.location.href = 'index.html';
+      } else {
+        console.log('✅ User authenticated:', user.email);
+        
+        // Load user's profile image
+        try {
+          const docRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
+            
+            // NEW: Use reference image filename instead of profile image URL
+            if (userData.referenceImageFilename) {
+              // CHANGE: Use window.userReferenceImage
+              window.userReferenceImage = userData.referenceImageFilename;
+              
+              // Display reference image
+              const userPhoto = document.getElementById('user-photo');
+              userPhoto.src = `https://stylo-ai.onrender.com/api/image/${userData.referenceImageFilename}`;
+              userPhoto.classList.remove('hidden');
+              document.getElementById('photo-placeholder').style.display = 'none';
+              
+              console.log('📸 User reference image loaded:', userData.referenceImageFilename);
+            } else if (userData.profileImageUrl) {
+              // Fallback to original if no reference exists yet
+              window.userProfileImageUrl = userData.profileImageUrl;
+              
+              const userPhoto = document.getElementById('user-photo');
+              userPhoto.src = userData.profileImageUrl;
+              userPhoto.classList.remove('hidden');
+              document.getElementById('photo-placeholder').style.display = 'none';
+              
+              console.log('📸 User profile image loaded (no reference yet)');
+            }
+          }
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+        }
+      }
+    });
+
+    // Logout function
+    window.logout = () => {
+      signOut(auth).then(() => {
+        console.log('✅ User logged out');
+        window.location.href = 'index.html';
+      }).catch((error) => {
+        console.error('❌ Logout error:', error);
+      });
+    };
+  </script>
+
+  <!-- Logout Button (Top Right) -->
+  <div class="fixed top-6 right-6 z-50">
+    <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition shadow-lg flex items-center space-x-2">
+      <span>Logout</span>
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Chat Interface (Always visible) -->
+  <div id="chat-interface" class="h-screen flex bg-white" style="background-color: #ffffff !important;">
+    <!-- Chat Area -->
+    <div id="chat-area" class="flex-1 p-8 flex flex-col border-r border-gray-200" style="background-color: #fafafa;">
+      <div class="flex-1 overflow-y-auto mb-6" id="chat-messages">
+        <!-- Welcome message -->
+        <div class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <h1 class="text-2xl font-medium mb-2" style="color: #2D5A3D;">Ready to shop?</h1>
+            <p class="text-gray-600">Ask me anything about outfits and fashion!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Photo Area -->
+    <div id="photo-area" class="w-2/5 flex flex-col items-center justify-center p-6" style="background-color: #fdfdfd;">
+      <div id="photo-placeholder" class="text-gray-500 text-lg text-center">
+        <div class="mb-4">
+          <svg class="w-16 h-16 mx-auto text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+        </div>
+        <div>Your profile photo</div>
+      </div>
+     
+      <!-- Loading Spinner -->
+      <div id="loading-spinner" class="hidden flex flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+        <div class="text-gray-600 text-lg">Generating your outfit...</div>
+      </div>
+     
+      <!-- Generated Image -->
+      <div class="rounded-lg p-4 hidden" id="image-container" style="background-color: #fdfdfd;">
+        <img id="gemini-image" src="" alt="Generated Outfit" class="max-w-full max-h-full rounded-lg">
+      </div>
+      
+      <!-- User Photo -->
+      <img id="user-photo" alt="Your Photo" class="max-w-full max-h-full hidden rounded-lg">
+    </div>
+  </div>
+
+  <!-- Chat Input Bar (Always visible at bottom) -->
+  <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-6">
+    <div class="bg-white rounded-full px-6 py-4 flex items-center border border-gray-200 shadow-lg">
+      <div class="flex items-center space-x-3 text-gray-600 mr-4">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+        </svg>
+        <span class="text-sm">Tools</span>
+      </div>
+     
+      <input 
+        type="text" 
+        id="chat-input"
+        placeholder="Ask taylor.ai anything..." 
+        class="flex-1 bg-transparent text-gray-900 placeholder-gray-500 outline-none text-lg"
+      >
+     
+      <button id="submit-btn" class="ml-4 bg-gray-200 text-gray-700 w-10 h-10 rounded-full hover:bg-gray-300 transition-colors flex items-center justify-center">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Done Button -->
+  <button id="done-btn" class="done-button hidden">
+    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" width="20" height="20">
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+    </svg>
+    View Items
+  </button>
+
+  <!-- Modal/Popup for showing collected products -->
+  <div id="products-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 style="margin: 0; color: #2D5A3D;">Your Shopping List</h2>
+        <button class="modal-close" onclick="closeProductsModal()">&times;</button>
+      </div>
+      <div id="products-list">
+        <!-- Products will be inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Track all collected products
+    let collectedProducts = [];
+
+    // Chat functionality
+    document.getElementById("submit-btn").addEventListener("click", function() {
+      const input = document.getElementById("chat-input");
+      const message = input.value.trim();
+      if (message) {
+        sendChatMessage(message);
+      }
+    });
+    
+    document.getElementById("chat-input").addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const message = document.getElementById("chat-input").value.trim();
+        if (message) {
+          sendChatMessage(message);
+        }
+      }
+    });
+  
+    async function sendChatMessage(message) {
+      const chatMessages = document.getElementById("chat-messages");
+      const input = document.getElementById("chat-input");
+      input.value = "";
+      
+      // Clear welcome message if it exists
+      const welcomeMsg = chatMessages.querySelector('.flex.items-center.justify-center');
+      if (welcomeMsg) {
+        welcomeMsg.remove();
+      }
+      
+      // Add user message
+      const userMsg = document.createElement("div");
+      userMsg.className = "flex justify-end mb-4 message";
+      userMsg.innerHTML = `
+        <div class="text-white px-4 py-3 rounded-2xl rounded-br-md max-w-xs" style="background-color: #2D5A3D;">
+          ${message}
+        </div>
+      `;
+      chatMessages.appendChild(userMsg);
+      setTimeout(() => userMsg.classList.add("visible"), 10);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      // Add typing indicator
+      const typingIndicator = document.createElement("div");
+      typingIndicator.className = "flex justify-start mb-4 message visible";
+      typingIndicator.innerHTML = `
+        <div class="bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
+          <div class="flex space-x-1">
+            <span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></span>
+            <span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay: 0.2s;"></span>
+            <span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay: 0.4s;"></span>
+          </div>
+        </div>
+      `;
+      chatMessages.appendChild(typingIndicator);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      // Show loading spinner
+      const loadingSpinner = document.getElementById("loading-spinner");
+      const imageContainer = document.getElementById("image-container");
+      const geminiImage = document.getElementById("gemini-image");
+      const userPhoto = document.getElementById("user-photo");
+      
+      userPhoto.classList.add("hidden");
+      imageContainer.classList.add("hidden");
+      loadingSpinner.classList.remove("hidden");
+      
+      try {
+        console.log('🎨 Calling /api/generate-outfit...');
+        console.log('📸 Current reference image:', window.userReferenceImage);
+        
+        const requestBody = {
+          prompt: message,
+          max_results: 2,
+          reference_image: window.userReferenceImage
+        };
+        
+        console.log('📤 Request body:', requestBody);
+        
+        const response = await fetch('https://stylo-ai.onrender.com/api/generate-outfit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Backend response:', data);
+        
+        // NEW: Collect products from the response
+        if (data.products && data.products.length > 0) {
+          data.products.forEach(product => {
+            // Add each product to the collection if it's not already there
+            const exists = collectedProducts.some(p => p.product_link === product.product_link);
+            if (!exists) {
+              collectedProducts.push({
+                brand: product.brand,
+                image_url: product.image_url,
+                product_link: product.product_link,
+                query: message // Track which query generated this product
+              });
+            }
+          });
+          
+          console.log('🛍️ Total collected products:', collectedProducts.length);
+          
+          // Show the "Done" button if we have products
+          if (collectedProducts.length > 0) {
+            document.getElementById('done-btn').classList.remove('hidden');
+          }
+        }
+        
+        // Update reference image
+        if (data.latest_image) {
+          window.userReferenceImage = data.latest_image;
+          console.log('🔄 Updated reference image:', window.userReferenceImage);
+        }
+        
+        // Remove typing indicator
+        typingIndicator.style.opacity = '0';
+        setTimeout(() => typingIndicator.remove(), 300);
+        
+        // Add bot response
+        const botMsg = document.createElement("div");
+        botMsg.className = "flex justify-start mb-4 message";
+        botMsg.innerHTML = `
+          <div class="bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
+            ✨ I've generated your outfit! Check it out on the right →
+          </div>
+        `;
+        chatMessages.appendChild(botMsg);
+        setTimeout(() => botMsg.classList.add("visible"), 10);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Show generated image
+        loadingSpinner.classList.add("hidden");
+        
+        if (data.generated_images && data.generated_images.length > 0) {
+          const imageUrl = `https://stylo-ai.onrender.com/api/image/${encodeURIComponent(data.generated_images[0])}`;
+          geminiImage.src = imageUrl;
+          geminiImage.onload = () => {
+            imageContainer.classList.remove("hidden");
+          };
+          geminiImage.onerror = () => {
+            showChatError('Failed to load outfit image');
+          };
+        } else {
+          showChatError('No outfit generated');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error:', error);
+        typingIndicator.style.opacity = '0';
+        setTimeout(() => typingIndicator.remove(), 300);
+        showChatError(`Error: ${error.message}`);
+        loadingSpinner.classList.add("hidden");
+        userPhoto.classList.remove("hidden");
+      }
+    }
+   
+    function showChatError(errorMsg) {
+      const chatMessages = document.getElementById("chat-messages");
+      const errorMsgElement = document.createElement("div");
+      errorMsgElement.className = "flex justify-start mb-4 message";
+      errorMsgElement.innerHTML = `
+        <div class="bg-red-100 text-red-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
+          ❌ ${errorMsg}
+        </div>
+      `;
+      chatMessages.appendChild(errorMsgElement);
+      setTimeout(() => errorMsgElement.classList.add("visible"), 10);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Done button functionality
+    document.getElementById('done-btn').addEventListener('click', function() {
+      showProductsModal();
+    });
+    
+    function showProductsModal() {
+      const modal = document.getElementById('products-modal');
+      const productsList = document.getElementById('products-list');
+      
+      // Clear previous content
+      productsList.innerHTML = '';
+      
+      if (collectedProducts.length === 0) {
+        productsList.innerHTML = '<p style="text-align: center; color: #888;">No products collected yet. Start chatting to find items!</p>';
+      } else {
+        collectedProducts.forEach((product, index) => {
+          const productItem = document.createElement('div');
+          productItem.className = 'product-item';
+          productItem.innerHTML = `
+            <img src="${product.image_url}" alt="${product.brand}" class="product-thumbnail">
+            <div class="product-details">
+              <div class="product-brand">${product.brand}</div>
+              <div style="color: #666; font-size: 14px; margin-bottom: 8px;">From: "${product.query}"</div>
+              <a href="${product.product_link}" target="_blank" class="product-link-btn">
+                View Product →
+              </a>
+            </div>
+          `;
+          productsList.appendChild(productItem);
+        });
+      }
+      
+      modal.classList.add('active');
+    }
+    
+    function closeProductsModal() {
+      const modal = document.getElementById('products-modal');
+      modal.classList.remove('active');
+    }
+    
+    // Close modal when clicking outside
+    document.getElementById('products-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeProductsModal();
+      }
+    });
+  </script>
+</body>
+</html>
