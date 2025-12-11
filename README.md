@@ -1,2 +1,0 @@
-# Stylo.ai
-HackHarvard 
