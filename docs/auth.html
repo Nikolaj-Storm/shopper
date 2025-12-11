@@ -1,84 +1,376 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-white">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>taylor.ai - Authentication</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .taylor-green { color: #2D5A3D; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #FAFAFA;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .auth-container {
+            max-width: 480px;
+            width: 100%;
+        }
+        
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 400;
+            font-style: italic;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: #1a1a1a;
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .auth-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.08);
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+        }
+        
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 400;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #1a1a1a;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.01em;
+        }
+        
+        input[type="email"],
+        input[type="password"],
+        input[type="file"] {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            color: #1a1a1a;
+        }
+        
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+        
+        input::placeholder {
+            color: #999;
+        }
+        
+        .photo-upload {
+            border: 2px dashed rgba(0, 0, 0, 0.15);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .photo-upload:hover {
+            border-color: #1a1a1a;
+            background: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .photo-upload svg {
+            width: 48px;
+            height: 48px;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .photo-upload p {
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+        
+        .photo-upload span {
+            font-size: 0.8rem;
+            color: #999;
+        }
+        
+        .preview-container {
+            display: none;
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .preview-container img {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.6s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: #1a1a1a;
+            color: white;
+            margin-top: 2rem;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status-message {
+            text-align: center;
+            padding: 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .status-success {
+            background: rgba(34, 197, 94, 0.1);
+            color: #16a34a;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        
+        .status-info {
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .toggle-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .toggle-link a {
+            color: #1a1a1a;
+            font-weight: 500;
+            text-decoration: none;
+            position: relative;
+        }
+        
+        .toggle-link a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: #1a1a1a;
+            transition: width 0.3s;
+        }
+        
+        .toggle-link a:hover::after {
+            width: 100%;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .remove-btn {
+            background: none;
+            border: none;
+            color: #dc2626;
+            font-size: 0.875rem;
+            cursor: pointer;
+            padding: 0.5rem 0;
+            margin-top: 0.5rem;
+            transition: opacity 0.3s;
+        }
+        
+        .remove-btn:hover {
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 640px) {
+            .auth-card {
+                padding: 2rem;
+            }
+            
+            .logo {
+                font-size: 2rem;
+                margin-bottom: 2rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+        }
     </style>
 </head>
-<body class="h-full flex items-center justify-center text-gray-800 p-4 bg-gray-50">
-    <div class="w-full max-w-md">
-        <h1 class="text-4xl font-bold text-center mb-6 taylor-green">taylor.ai</h1>
+<body>
+    <div class="auth-container">
+        <h1 class="logo">taylor.ai</h1>
 
-        <div class="bg-white p-8 rounded-lg border border-gray-200 shadow-lg">
-            
+        <div class="auth-card">
             <!-- Sign Up View -->
             <div id="signup-view">
-                <h2 class="text-2xl font-semibold text-gray-900 text-center mb-6">Create Your Account</h2>
+                <h2>Create Your Account</h2>
                 
-                <!-- Email & Password -->
-                <div class="space-y-4 mb-6">
-                    <input type="email" id="signup-email" placeholder="Email" class="w-full bg-gray-100 text-gray-900 p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <input type="password" id="signup-password" placeholder="Password (6+ characters)" class="w-full bg-gray-100 text-gray-900 p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="signup-email" placeholder="your@email.com">
                 </div>
 
-                <!-- Photo Upload Section (REQUIRED) -->
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Upload Your Photo <span class="text-red-500">*</span>
-                    </label>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signup-password" placeholder="6+ characters">
+                </div>
+
+                <div class="form-group">
+                    <label>Your Photo <span style="color: #dc2626;">*</span></label>
                     
-                    <div id="photo-upload-zone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-green-500 transition">
-                        <svg class="w-10 h-10 mx-auto text-gray-400 mb-2" fill="currentColor" viewBox="0 0 24 24">
+                    <div id="photo-upload-zone" class="photo-upload">
+                        <svg fill="currentColor" viewBox="0 0 24 24">
                             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                         </svg>
-                        <p class="text-gray-700 text-sm font-medium">Click to upload your photo</p>
-                        <p class="text-gray-500 text-xs mt-1">PNG, JPG up to 10MB</p>
+                        <p>Click to upload your photo</p>
+                        <span>PNG, JPG up to 10MB</span>
                     </div>
                     
                     <input type="file" id="photo-input-signup" accept="image/*" class="hidden">
                     
-                    <div id="photo-preview" class="hidden mt-4">
-                        <img id="preview-img" class="w-full h-32 object-cover rounded-lg border-2 border-green-500 mb-2">
-                        <p id="preview-filename" class="text-sm text-gray-600 text-center"></p>
-                        <button id="remove-photo-btn" class="text-red-500 text-sm hover:underline mt-1 block mx-auto">Remove photo</button>
+                    <div id="photo-preview" class="preview-container">
+                        <img id="preview-img" alt="Preview">
+                        <p id="preview-filename"></p>
+                        <button id="remove-photo-btn" class="remove-btn">Remove photo</button>
                     </div>
                 </div>
 
-                <!-- Sign Up Button -->
-                <button id="signup-btn" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 p-3 rounded-md font-semibold transition shadow-sm hover:shadow-md">
-                    Create Account
-                </button>
+                <button id="signup-btn" class="btn btn-primary">Create Account</button>
                 
-                <p id="signup-error" class="text-red-500 text-center mt-4 h-5 text-sm"></p>
-                <p id="signup-status" class="text-center mt-2 h-5 text-sm"></p>
+                <div id="signup-status"></div>
                 
-                <p class="text-center mt-4 text-sm text-gray-600">
+                <div class="toggle-link">
                     Already have an account? 
-                    <a href="#" id="show-login-link" class="font-semibold text-emerald-600 hover:underline">Sign In</a>
-                </p>
+                    <a href="#" id="show-login-link">Sign In</a>
+                </div>
             </div>
 
             <!-- Sign In View -->
             <div id="login-view" class="hidden">
-                <h2 class="text-2xl font-semibold text-gray-900 text-center mb-6">Welcome Back!</h2>
-                <div class="space-y-4">
-                    <input type="email" id="login-email" placeholder="Email" class="w-full bg-gray-100 text-gray-900 p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <input type="password" id="login-password" placeholder="Password" class="w-full bg-gray-100 text-gray-900 p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <h2>Welcome Back</h2>
+                
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" placeholder="your@email.com">
                 </div>
-                <div class="mt-6">
-                     <button id="login-btn" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 p-3 rounded-md font-semibold transition shadow-sm hover:shadow-md">Sign In</button>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" placeholder="Enter your password">
                 </div>
-                 <p id="login-error" class="text-red-500 text-center mt-4 h-5"></p>
-                <p class="text-center mt-4 text-sm text-gray-600">
+
+                <button id="login-btn" class="btn btn-primary">Sign In</button>
+                
+                <div id="login-status"></div>
+                
+                <div class="toggle-link">
                     Don't have an account? 
-                    <a href="#" id="show-signup-link" class="font-semibold text-emerald-600 hover:underline">Sign Up</a>
-                </p>
+                    <a href="#" id="show-signup-link">Sign Up</a>
+                </div>
             </div>
         </div>
     </div>
@@ -111,13 +403,12 @@
         const previewImg = document.getElementById('preview-img');
         const previewFilename = document.getElementById('preview-filename');
         const signupBtn = document.getElementById('signup-btn');
-        const signupError = document.getElementById('signup-error');
         const signupStatus = document.getElementById('signup-status');
         
         let uploadedPhotoFile = null;
-        let isSigningUp = false; // NEW: Flag to prevent early redirect
+        let isSigningUp = false;
 
-        // Check URL params to determine view
+        // Check URL params
         const urlParams = new URLSearchParams(window.location.search);
         const mode = urlParams.get('mode');
         if (mode === 'signin') {
@@ -138,10 +429,9 @@
             signupView.classList.remove('hidden');
         });
 
-        // Check if already logged in - UPDATED: Don't redirect during signup
+        // Check if already logged in
         onAuthStateChanged(auth, user => {
             if (user && !isSigningUp) {
-                console.log('✅ User already logged in, redirecting...');
                 window.location.href = 'chat.html';
             }
         });
@@ -157,86 +447,65 @@
                 reader.onload = (e) => {
                     previewImg.src = e.target.result;
                     previewFilename.textContent = file.name;
-                    photoPreview.classList.remove('hidden');
-                    photoUploadZone.classList.add('hidden');
+                    photoPreview.style.display = 'block';
+                    photoUploadZone.style.display = 'none';
                 };
                 reader.readAsDataURL(file);
-                console.log('📸 Photo selected:', file.name);
             }
         });
 
-        // Remove photo
         document.getElementById('remove-photo-btn').addEventListener('click', (e) => {
             e.preventDefault();
             uploadedPhotoFile = null;
-            photoPreview.classList.add('hidden');
-            photoUploadZone.classList.remove('hidden');
+            photoPreview.style.display = 'none';
+            photoUploadZone.style.display = 'block';
             photoInputSignup.value = '';
         });
 
-        // Sign Up - PHOTO REQUIRED
+        // Sign Up
         signupBtn.addEventListener('click', async () => {
             const email = document.getElementById('signup-email').value.trim();
             const password = document.getElementById('signup-password').value;
             
-            signupError.textContent = '';
-            signupStatus.textContent = '';
+            signupStatus.innerHTML = '';
             
-            // Validation
             if (!email || !password) {
-                signupError.textContent = 'Please enter both email and password';
+                signupStatus.innerHTML = '<div class="status-message status-error">Please enter both email and password</div>';
                 return;
             }
             if (password.length < 6) {
-                signupError.textContent = 'Password must be at least 6 characters';
+                signupStatus.innerHTML = '<div class="status-message status-error">Password must be at least 6 characters</div>';
                 return;
             }
             if (!uploadedPhotoFile) {
-                signupError.textContent = '⚠️ Please upload your photo to continue';
+                signupStatus.innerHTML = '<div class="status-message status-error">Please upload your photo to continue</div>';
                 return;
             }
             
-            isSigningUp = true; // NEW: Set flag to prevent early redirect
+            isSigningUp = true;
             signupBtn.disabled = true;
             signupBtn.textContent = 'Creating Account...';
-            signupStatus.className = 'text-center mt-2 h-5 text-sm text-blue-600';
-            signupStatus.textContent = '⏳ Creating your account...';
+            signupStatus.innerHTML = '<div class="status-message status-info">⏳ Creating your account...</div>';
             
             try {
-                console.log('🚀 Step 1: Creating Firebase user...');
-                console.log('📧 Email:', email);
-                console.log('📸 Photo file:', uploadedPhotoFile.name, uploadedPhotoFile.size, 'bytes');
-                
-                // 1. Create Firebase user account
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
                 
-                console.log('✅ User created:', user.uid);
-                signupStatus.textContent = '📤 Uploading your photo to Firebase Storage...';
+                signupStatus.innerHTML = '<div class="status-message status-info">📤 Uploading your photo...</div>';
                 
-                // 2. Upload photo to Firebase Storage
                 const timestamp = Date.now();
                 const fileName = `profile_${timestamp}.jpg`;
                 const storagePath = `user_images/${user.uid}/${fileName}`;
                 const storageRef = ref(storage, storagePath);
                 
-                console.log('📤 Uploading to path:', storagePath);
-                console.log('📤 Storage bucket:', storage.app.options.storageBucket);
-                
                 const snapshot = await uploadBytes(storageRef, uploadedPhotoFile);
-                console.log('✅ Upload successful! Snapshot:', snapshot);
-                console.log('✅ Full path:', snapshot.ref.fullPath);
-                
                 const profileImageUrl = await getDownloadURL(snapshot.ref);
-                console.log('✅ Download URL obtained:', profileImageUrl);
                 
-                signupStatus.textContent = '🎨 Generating your reference image (30-60 sec)...';
+                signupStatus.innerHTML = '<div class="status-message status-info">🎨 Generating your reference image (30-60 sec)...</div>';
                 
-                // NEW: Generate reference image via API
                 const formData = new FormData();
                 formData.append('file', uploadedPhotoFile);
                 
-                console.log('🎨 Calling /generate-reference API...');
                 const refResponse = await fetch('https://stylo-ai.onrender.com/api/generate-reference', {
                     method: 'POST',
                     body: formData
@@ -248,58 +517,36 @@
                 
                 const refData = await refResponse.json();
                 const referenceImageFilename = refData.reference_image;
-                console.log('✅ Reference image generated:', referenceImageFilename);
                 
-                signupStatus.textContent = '💾 Saving your profile to Firestore...';
+                signupStatus.innerHTML = '<div class="status-message status-info">💾 Saving your profile...</div>';
                 
-                // 3. Save user data to Firestore (with BOTH images)
                 const userDoc = {
                     email: user.email,
-                    profileImageUrl: profileImageUrl, // Original uploaded photo
-                    referenceImageFilename: referenceImageFilename, // Generated reference
+                    profileImageUrl: profileImageUrl,
+                    referenceImageFilename: referenceImageFilename,
                     createdAt: new Date().toISOString()
                 };
                 
-                console.log('💾 Saving to Firestore:', userDoc);
-                
                 await setDoc(doc(db, "users", user.uid), userDoc);
                 
-                console.log('✅ Profile saved to Firestore!');
+                signupStatus.innerHTML = '<div class="status-message status-success">✅ Account created successfully! Redirecting...</div>';
                 
-                signupStatus.className = 'text-center mt-2 h-5 text-sm text-green-600';
-                signupStatus.textContent = '✅ Account created successfully! Redirecting...';
-                
-                // 4. Redirect to chat
                 setTimeout(() => {
                     isSigningUp = false;
                     window.location.href = 'chat.html';
                 }, 1500);
                 
             } catch (error) {
-                isSigningUp = false; // NEW: Clear flag on error
+                isSigningUp = false;
                 
-                console.error('❌ ERROR DETAILS:');
-                console.error('  - Error object:', error);
-                console.error('  - Error code:', error.code);
-                console.error('  - Error message:', error.message);
-                console.error('  - Error stack:', error.stack);
-                
-                // User-friendly error messages
-                if (error.code === 'storage/unauthorized') {
-                    signupError.textContent = '❌ Firebase Storage permission denied. Check Storage rules!';
-                } else if (error.code === 'storage/canceled') {
-                    signupError.textContent = '❌ Upload canceled. Please try again.';
-                } else if (error.code === 'storage/unknown') {
-                    signupError.textContent = '❌ Upload failed. Check your internet connection.';
-                } else if (error.code === 'auth/email-already-in-use') {
-                    signupError.textContent = '❌ Email already in use. Try signing in instead.';
-                } else if (error.code === 'permission-denied') {
-                    signupError.textContent = '❌ Firestore permission denied. Check Firestore rules!';
-                } else {
-                    signupError.textContent = `❌ Error: ${error.message}`;
+                let errorMsg = error.message;
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMsg = 'Email already in use. Try signing in instead.';
+                } else if (error.code === 'storage/unauthorized') {
+                    errorMsg = 'Storage permission denied. Check Firebase rules.';
                 }
                 
-                signupStatus.textContent = '';
+                signupStatus.innerHTML = `<div class="status-message status-error">❌ ${errorMsg}</div>`;
                 signupBtn.disabled = false;
                 signupBtn.textContent = 'Create Account';
             }
@@ -309,11 +556,11 @@
         async function handleLogin() {
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
-            const error = document.getElementById('login-error');
+            const statusDiv = document.getElementById('login-status');
             
-            error.textContent = '';
+            statusDiv.innerHTML = '';
             if (!email || !password) {
-                error.textContent = 'Please enter both email and password';
+                statusDiv.innerHTML = '<div class="status-message status-error">Please enter both email and password</div>';
                 return;
             }
             
@@ -323,12 +570,12 @@
             
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                // Will redirect via onAuthStateChanged
             } catch (err) {
-                error.textContent = err.code === 'auth/user-not-found' ? 'No account found' : 
-                                   err.code === 'auth/wrong-password' ? 'Incorrect password' : 
-                                   err.code === 'auth/invalid-credential' ? 'Invalid email or password' :
-                                   err.message;
+                let errorMsg = 'Invalid email or password';
+                if (err.code === 'auth/user-not-found') errorMsg = 'No account found';
+                if (err.code === 'auth/wrong-password') errorMsg = 'Incorrect password';
+                
+                statusDiv.innerHTML = `<div class="status-message status-error">${errorMsg}</div>`;
                 btn.disabled = false;
                 btn.textContent = 'Sign In';
             }
@@ -340,20 +587,6 @@
         });
         document.getElementById('login-password').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleLogin();
-        });
-
-        // Enter key for signup
-        document.getElementById('signup-email').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('signup-password').focus();
-        });
-        document.getElementById('signup-password').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                if (uploadedPhotoFile) {
-                    signupBtn.click();
-                } else {
-                    photoUploadZone.click();
-                }
-            }
         });
     </script>
 </body>
