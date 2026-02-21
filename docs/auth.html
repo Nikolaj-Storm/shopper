@@ -376,6 +376,9 @@
     </div>
 
     <script type="module">
+        // Backend URL - update this if the backend moves
+        const BACKEND_URL = 'https://stylo-ai.onrender.com';
+
         const firebaseConfig = {
             apiKey: "AIzaSyDNs9nRygrXR0MaYosEYQeKxcpJHFgVzKo",
             authDomain: "taylor-2680b.firebaseapp.com",
@@ -506,7 +509,7 @@
                 const formData = new FormData();
                 formData.append('file', uploadedPhotoFile);
                 
-                const refResponse = await fetch('https://stylo-ai.onrender.com/api/generate-reference', {
+                const refResponse = await fetch(`${BACKEND_URL}/api/generate-reference`, {
                     method: 'POST',
                     body: formData
                 });
