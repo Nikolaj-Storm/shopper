@@ -295,68 +295,17 @@ async def generate_reference(file: UploadFile = File(...)):
         print(f" File size: {len(contents)} bytes")
         user_image = Image.open(BytesIO(contents))
         print(f" Uploaded image: {file.filename} ({user_image.size}, mode: {user_image.mode})")
-        # Load reference style image if available (optional)
-        style_reference_path = Path(__file__).resolve().parent.parent / "Images" / "Emmanuel_Reference.png"
-        style_reference_image = None
-        if style_reference_path.exists():
-            style_reference_image = Image.open(style_reference_path)
-            print(f" Reference style image loaded: {style_reference_image.size}, mode: {style_reference_image.mode}")
-        else:
-            print(f" No style reference image found at {style_reference_path}, proceeding without it")
-
-        # Create prompt for Gemini to generate clean reference photo
-        if style_reference_image:
-            prompt = """PHOTO EDITING TASK - Create a clean, professional reference photo:
-SOURCE IMAGE: First image (user's uploaded photo)
-STYLE REFERENCE: Second image (the target style to match - this is the EXACT pose you need to replicate)
-YOUR TASK:
-1. Extract the person from the first image
-2. Create a clean, professional portrait matching the EXACT style and pose of the second image:
-   - Make Sure the background is completely white and has no shadows
-   - Person centered in frame
-   - Full body visible (head to feet or at least to knees)
-   - **CRITICAL: Arms must be LIFTED SLIGHTLY OUT TO THE SIDES (like an A-pose or game character reference pose)**
-   - **CRITICAL: Look at the reference image - replicate this EXACT arm position with arms raised slightly away from body**
-   - Neutral, straight-on pose facing camera directly
-   - Standing straight and upright
-   - Good lighting, professional photo quality
-   - Remove any background objects, clutter, or distractions
-   - Keep the person's clothing, face, and features exactly as they are
-   - Professional studio-quality portrait
-IMPORTANT POSE REQUIREMENTS:
-- Arms: LIFTED SLIGHTLY TO THE SIDES at approximately 20-30 degrees from body (like a game avatar T-pose/A-pose)
-- Arms should be extended out to sides, NOT hanging down, NOT crossed, NOT in pockets
-- This creates space between arms and torso - essential for clothing visualization
-- Body: Facing forward, centered, standing straight
-- Hands: Relaxed, fingers extended naturally
-- Feet: Slightly apart, natural standing position
-- Head: Looking directly at camera
-- Background: Pure white with no shadows
-- Lighting: Even and professional
-- Person should be in sharp focus
-This is for use as a reference photo for virtual try-on - the slightly lifted arm position (like a game character reference) is CRITICAL for proper clothing visualization.
-Generate this clean reference photo now with arms lifted slightly to the sides."""
-            contents = [prompt, user_image, style_reference_image]
-        else:
-            prompt = """PHOTO EDITING TASK - Create a clean, professional reference photo:
+        # Create prompt for Gemini to generate clean reference photo purely by removing the background
+        prompt = """PHOTO EDITING TASK - Background Removal Only:
 SOURCE IMAGE: The uploaded photo of a person.
 YOUR TASK:
-1. Extract the person from the uploaded image
-2. Create a clean, professional full-body portrait:
-   - Pure white background with no shadows
-   - Person centered in frame
-   - Full body visible (head to feet or at least to knees)
-   - **CRITICAL: Arms must be LIFTED SLIGHTLY OUT TO THE SIDES (A-pose, approximately 20-30 degrees from body)**
-   - Arms extended out to sides, NOT hanging down, NOT crossed, NOT in pockets
-   - Neutral, straight-on pose facing camera directly
-   - Standing straight and upright
-   - Good lighting, professional photo quality
-   - Remove any background objects, clutter, or distractions
-   - Keep the person's clothing, face, and features exactly as they are
-   - Professional studio-quality portrait
-This is for use as a virtual try-on reference photo. The slightly lifted arm position is CRITICAL.
-Generate this clean reference photo now."""
-            contents = [prompt, user_image]
+1. Extract the person exactly as they are in the source image.
+2. Place them on a pure white background with no shadows.
+3. DO NOT change their pose, DO NOT change their facial expression, DO NOT change their clothing, and DO NOT change their body shape or size.
+4. Keep the person's clothing, face, and features EXACTLY as they are in the original photo.
+5. Just give me the original person cut out perfectly on a white background.
+Generate this clean photo now."""
+        contents = [prompt, user_image]
 
         print(f" Generating reference image with Gemini...")
         # Generate the clean reference image using image generation model

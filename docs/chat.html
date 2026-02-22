@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat with taylor.ai</title>
   <link rel="icon" href="visuals/favicon.png" type="image/png">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
 
   <style>
     * {
@@ -37,9 +40,19 @@
     }
 
     @keyframes float {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(50px, -50px) scale(1.1); }
-      66% { transform: translate(-50px, 50px) scale(0.9); }
+
+      0%,
+      100% {
+        transform: translate(0, 0) scale(1);
+      }
+
+      33% {
+        transform: translate(50px, -50px) scale(1.1);
+      }
+
+      66% {
+        transform: translate(-50px, 50px) scale(0.9);
+      }
     }
 
     .bg-1 {
@@ -211,7 +224,11 @@
     }
 
     .bubble.user-bubble {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, rgba(142, 162, 255, 0.65) 0%, rgba(158, 115, 212, 0.65) 100%);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
       color: white;
       border-bottom-right-radius: 6px;
     }
@@ -250,12 +267,27 @@
       animation: typing 1.4s infinite;
     }
 
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    .typing-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
 
     @keyframes typing {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-      30% { transform: translateY(-6px); opacity: 1; }
+
+      0%,
+      60%,
+      100% {
+        transform: translateY(0);
+        opacity: 0.4;
+      }
+
+      30% {
+        transform: translateY(-6px);
+        opacity: 1;
+      }
     }
 
     /* Photo Area (Right Panel) */
@@ -309,7 +341,9 @@
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     .loading-spinner p {
@@ -748,7 +782,8 @@
         <button onclick="logout()" class="logout-btn">
           <span>Sign Out</span>
           <svg fill="currentColor" viewBox="0 0 24 24" width="14" height="14">
-            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+            <path
+              d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
           </svg>
         </button>
       </div>
@@ -768,7 +803,8 @@
     <div class="photo-panel">
       <div id="photo-placeholder" class="photo-placeholder">
         <svg fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          <path
+            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
         </svg>
         <p>Your profile photo</p>
       </div>
@@ -794,22 +830,17 @@
     <div class="input-bar">
       <button id="upload-photo-btn" class="upload-btn" title="Update your try-on photo">
         <svg fill="currentColor" viewBox="0 0 24 24">
-          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
         </svg>
         <span>Photo</span>
       </button>
       <input type="file" id="new-photo-input" accept="image/*" class="hidden">
 
-      <input
-        type="text"
-        id="chat-input"
-        class="chat-input"
-        placeholder="Ask taylor.ai anything..."
-      >
+      <input type="text" id="chat-input" class="chat-input" placeholder="Ask taylor.ai anything...">
 
       <button id="submit-btn" class="send-btn">
         <svg fill="currentColor" viewBox="0 0 24 24">
-          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
         </svg>
       </button>
     </div>
@@ -818,7 +849,7 @@
   <!-- Done Button -->
   <button id="done-btn" class="done-button hidden">
     <svg fill="currentColor" viewBox="0 0 24 24">
-      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
     </svg>
     View Items
   </button>
@@ -862,13 +893,13 @@
     }
 
     // Chat functionality
-    document.getElementById("submit-btn").addEventListener("click", function() {
+    document.getElementById("submit-btn").addEventListener("click", function () {
       const input = document.getElementById("chat-input");
       const message = input.value.trim();
       if (message) sendChatMessage(message);
     });
 
-    document.getElementById("chat-input").addEventListener("keypress", function(event) {
+    document.getElementById("chat-input").addEventListener("keypress", function (event) {
       if (event.key === "Enter") {
         event.preventDefault();
         const message = document.getElementById("chat-input").value.trim();
@@ -1028,7 +1059,7 @@
     }
 
     // Done button
-    document.getElementById('done-btn').addEventListener('click', function() {
+    document.getElementById('done-btn').addEventListener('click', function () {
       showProductsModal();
     });
 
@@ -1091,16 +1122,16 @@
     }
 
     // Close modal when clicking outside
-    document.getElementById('products-modal').addEventListener('click', function(e) {
+    document.getElementById('products-modal').addEventListener('click', function (e) {
       if (e.target === this) closeProductsModal();
     });
 
     // Upload new try-on photo via + icon
-    document.getElementById('upload-photo-btn').addEventListener('click', function() {
+    document.getElementById('upload-photo-btn').addEventListener('click', function () {
       document.getElementById('new-photo-input').click();
     });
 
-    document.getElementById('new-photo-input').addEventListener('change', async function(e) {
+    document.getElementById('new-photo-input').addEventListener('change', async function (e) {
       const file = e.target.files[0];
       if (!file) return;
 
@@ -1165,4 +1196,5 @@
     });
   </script>
 </body>
+
 </html>
