@@ -70,6 +70,31 @@ class GenerateOutfitResponse(BaseModel):
     timestamp: str
     latest_image: str  # New field to return the latest generated image
 
+class SearchProductsRequest(BaseModel):
+    prompt: str
+    max_results: Optional[int] = 10
+
+class SearchProductsResponse(BaseModel):
+    success: bool
+    user_query: str
+    parsed_query: str
+    clothing_type: Optional[str]
+    color: Optional[str]
+    brand: Optional[str]
+    style: Optional[str]
+    gender: Optional[str]
+    products: List[ProductInfo]
+
+class GenerateTryonRequest(BaseModel):
+    product: ProductInfo
+    reference_image: Optional[str] = None
+
+class GenerateTryonResponse(BaseModel):
+    success: bool
+    message: str
+    generated_image: str
+    timestamp: str
+
 class GenerateReferenceResponse(BaseModel):
     success: bool
     message: str
@@ -213,11 +238,96 @@ async def generate_outfit(request: GenerateOutfitRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f" ❌ Error: {str(e)}")
+        print(f" \u274c Error: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Error processing request: {str(e)}"
         )
+
+@app.post("/api/search-products", response_model=SearchProductsResponse)
+async def search_products(request: SearchProductsRequest):
+    """
+    Search for clothing products based on natural language prompt
+    """
+    try:
+        print(f"\n🔍 Searching products: {request.prompt}")
+        parsed_info = parse_natural_language_query(request.prompt)
+        search_query = parsed_info.get('search_query', request.prompt)
+        products = search_clothing(search_query, request.max_results)
+        
+        if not products:
+            raise HTTPException(status_code=404, detail="No products found for the given query")
+            
+        print(f" Found {len(products)} products")
+        return SearchProductsResponse(
+            success=True,
+            user_query=request.prompt,
+            parsed_query=search_query,
+            clothing_type=parsed_info.get('clothing_type'),
+            color=parsed_info.get('color'),
+            brand=parsed_info.get('brand'),
+            style=parsed_info.get('style'),
+            gender=parsed_info.get('gender'),
+            products=[ProductInfo(**p) for p in products]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f" ❌ Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/generate-tryon", response_model=GenerateTryonResponse)
+async def generate_tryon(request: GenerateTryonRequest):
+    """
+    Generate a virtual try-on visualization for a single product
+    """
+    try:
+        print(f"\n👕 Generating try-on for: {request.product.brand}")
+        
+        # Resolve reference image
+        if request.reference_image:
+            cleaned_reference = Path(request.reference_image).name
+            base_dir = Path(__file__).resolve().parent
+            reference_image = str((base_dir / OUTPUT_IMAGE_DIR / cleaned_reference).resolve())
+        elif REFERENCE_IMAGE_PATH and os.path.exists(REFERENCE_IMAGE_PATH):
+            reference_image = REFERENCE_IMAGE_PATH
+        else:
+            raise HTTPException(status_code=400, detail="No reference image available. Please upload a photo first via /api/generate-reference.")
+
+        if not os.path.exists(reference_image):
+            raise HTTPException(status_code=400, detail="Reference image not found.")
+
+        # Ensure output directory exists
+        output_dir = Path(OUTPUT_IMAGE_DIR)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"outfit_{timestamp}_{request.product.brand.replace(' ', '_')}.png"
+        output_path = str(output_dir / filename)
+
+        # Use our styloAI integration
+        result = generate_outfit_visualization(
+            reference_image,
+            request.product.image_url,
+            output_path,
+            product_info=request.product.dict()
+        )
+
+        if not result['success']:
+            raise HTTPException(status_code=500, detail=result['message'])
+
+        print(f" ✓ Generated: {filename}")
+        return GenerateTryonResponse(
+            success=True,
+            message="Successfully generated outfit",
+            generated_image=filename,
+            timestamp=timestamp
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f" ❌ Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/image/{filename}")
 async def get_image(filename: str):

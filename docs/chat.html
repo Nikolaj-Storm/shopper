@@ -945,98 +945,83 @@
       document.getElementById('loading-text').textContent = 'Generating your outfit...';
 
       try {
-        console.log('Calling /api/generate-outfit...');
-        console.log('Current reference image:', window.userReferenceImage);
-
-        const requestBody = {
-          prompt: message,
-          max_results: 2,
-          reference_image: window.userReferenceImage
-        };
-
-        console.log('Request body:', requestBody);
-
-        const response = await fetch(`${BACKEND_URL}/api/generate-outfit`, {
+        console.log('Calling /api/search-products...');
+        const searchResponse = await fetch(`${BACKEND_URL}/api/search-products`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify({ prompt: message, max_results: 10 })
         });
 
-        if (!response.ok) throw new Error(`API returned ${response.status}`);
-
-        const data = await response.json();
-        console.log('Backend response:', data);
-
-        // Collect products
-        if (data.products && data.products.length > 0) {
-          data.products.forEach(product => {
-            const exists = collectedProducts.some(p => p.product_link === product.product_link);
-            if (!exists) {
-              collectedProducts.push({
-                brand: product.brand,
-                image_url: product.image_url,
-                product_link: product.product_link,
-                query: message
-              });
-            }
-          });
-
-          console.log('Total collected products:', collectedProducts.length);
-
-          if (collectedProducts.length > 0) {
-            document.getElementById('done-btn').classList.remove('hidden');
-          }
-        }
-
-        // Update reference image
-        if (data.latest_image) {
-          window.userReferenceImage = data.latest_image;
-          console.log('Updated reference image:', window.userReferenceImage);
-        }
+        if (!searchResponse.ok) throw new Error(`API returned ${searchResponse.status}`);
+        const searchData = await searchResponse.json();
 
         // Remove typing indicator
         typingRow.style.opacity = '0';
         setTimeout(() => typingRow.remove(), 300);
 
-        // Add bot response
-        const botRow = createMessageRow('bot');
-        botRow.appendChild(createBubble('bot', "I've generated your outfit! Check it out on the right."));
-        chatMessages.appendChild(botRow);
-        setTimeout(() => botRow.classList.add("visible"), 10);
+        if (!searchData.products || searchData.products.length === 0) {
+          showChatError('No products found for that request.');
+          loadingSpinner.classList.remove('active');
+          userPhoto.classList.add('active');
+          userPhoto.classList.remove('hidden');
+          return;
+        }
+
+        // Generate unique ID prefix for this batch
+        const batchId = Date.now();
+
+        // Add a bot bubble containing the products
+        const productsRow = createMessageRow('bot');
+        const productsBubble = document.createElement('div');
+        productsBubble.className = 'bubble bot-bubble';
+        productsBubble.style.maxWidth = '100%'; // Allow wider bubble for horizontal scroll
+
+        let productsHtml = `<p style="margin-bottom: 1rem;">I found these items! Generating a try-on for the first one...</p>`;
+        productsHtml += `<div class="products-carousel" style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem; max-width: 60vw;">`;
+
+        searchData.products.forEach((product, i) => {
+          // Add to collected products for the modal
+          const exists = collectedProducts.some(p => p.product_link === product.product_link);
+          if (!exists) {
+            collectedProducts.push({
+              brand: product.brand,
+              image_url: product.image_url,
+              product_link: product.product_link,
+              query: message
+            });
+          }
+
+          // Properly escape the JSON for the onclick handler
+          const productJsonStr = JSON.stringify(product).replace(/"/g, '&quot;');
+
+          productsHtml += `
+            <div class="product-item" style="flex: 0 0 160px; flex-direction: column; align-items: flex-start; padding: 0.75rem; margin-bottom: 0;">
+              <img src="${product.image_url}" alt="${escapeHtml(product.brand)}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 0.5rem; margin-right: 0;">
+              <div class="product-brand" style="font-size: 0.8rem; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;" title="${escapeHtml(product.brand)}">${escapeHtml(product.brand)}</div>
+              <button onclick="window.generateTryon(${batchId}_${i}, this, '${productJsonStr}')" id="tryon-btn-${batchId}_${i}" class="product-link-btn" style="width: 100%; text-align: center; font-size: 0.7rem; padding: 0.4rem 0; border: none; cursor: pointer;">Generate Try-On</button>
+            </div>
+          `;
+        });
+
+        productsHtml += `</div>`;
+        productsBubble.innerHTML = productsHtml;
+        productsRow.appendChild(productsBubble);
+        chatMessages.appendChild(productsRow);
+        setTimeout(() => productsRow.classList.add("visible"), 10);
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
-        // Show generated outfits
-        loadingSpinner.classList.remove('active');
-
-        if (data.generated_images && data.generated_images.length > 0) {
-          outfitsContainer.innerHTML = '';
-          data.generated_images.forEach((filename, i) => {
-            const product = data.products && data.products[i];
-
-            const card = document.createElement('div');
-            card.className = 'outfit-card';
-
-            const img = document.createElement('img');
-            img.src = `${BACKEND_URL}/api/image/${encodeURIComponent(filename)}`;
-            img.alt = product ? `Outfit by ${product.brand}` : 'Generated outfit';
-            card.appendChild(img);
-
-            if (product && /^https?:\/\//.test(product.product_link)) {
-              const shopBtn = document.createElement('a');
-              shopBtn.href = product.product_link;
-              shopBtn.target = '_blank';
-              shopBtn.rel = 'noopener noreferrer';
-              shopBtn.className = 'outfit-shop-btn';
-              shopBtn.textContent = `Shop at ${product.brand}`;
-              card.appendChild(shopBtn);
-            }
-
-            outfitsContainer.appendChild(card);
-          });
-          outfitsContainer.classList.add('active');
-        } else {
-          showChatError('No outfit generated');
+        if (collectedProducts.length > 0) {
+          document.getElementById('done-btn').classList.remove('hidden');
         }
+
+        // Set up the first try-on automatically
+        // We defer this slightly so the DOM has time to render the button
+        setTimeout(() => {
+          const firstBtn = document.getElementById(`tryon-btn-${batchId}_0`);
+          if (firstBtn) {
+            window.generateTryon(`${batchId}_0`, firstBtn, JSON.stringify(searchData.products[0]));
+          }
+        }, 100);
 
       } catch (error) {
         console.error('Error:', error);
@@ -1048,6 +1033,89 @@
         userPhoto.classList.remove('hidden');
       }
     }
+
+    // Global function to trigger individual try-on generations
+    window.generateTryon = async function (btnId, btnElement, productStr) {
+      if (!productStr) return;
+      const product = JSON.parse(productStr);
+
+      const loadingSpinner = document.getElementById("loading-spinner");
+      const outfitsContainer = document.getElementById("outfits-container");
+      const userPhoto = document.getElementById("user-photo");
+
+      // Update button state
+      btnElement.textContent = "Generating...";
+      btnElement.disabled = true;
+      btnElement.style.opacity = "0.7";
+      btnElement.style.background = "#999";
+
+      // Show spinner in right panel
+      userPhoto.classList.remove('active');
+      userPhoto.classList.add('hidden');
+      loadingSpinner.classList.add('active');
+      document.getElementById('loading-text').textContent = `Generating outfit by ${product.brand}...`;
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/generate-tryon`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product: product,
+            reference_image: window.userReferenceImage
+          })
+        });
+
+        if (!response.ok) throw new Error(`API returned ${response.status}`);
+        const data = await response.json();
+
+        // Disable spinner
+        loadingSpinner.classList.remove('active');
+
+        if (data.generated_image) {
+          const card = document.createElement('div');
+          card.className = 'outfit-card';
+
+          const img = document.createElement('img');
+          img.src = `${BACKEND_URL}/api/image/${encodeURIComponent(data.generated_image)}`;
+          img.alt = `Outfit by ${product.brand}`;
+          card.appendChild(img);
+
+          if (/^https?:\/\//.test(product.product_link)) {
+            const shopBtn = document.createElement('a');
+            shopBtn.href = product.product_link;
+            shopBtn.target = '_blank';
+            shopBtn.rel = 'noopener noreferrer';
+            shopBtn.className = 'outfit-shop-btn';
+            shopBtn.textContent = `Shop at ${product.brand}`;
+            card.appendChild(shopBtn);
+          }
+
+          // Prepend so newest is at the top
+          outfitsContainer.prepend(card);
+          outfitsContainer.classList.add('active');
+
+          // Update button to act as a shop link
+          btnElement.textContent = "View Item";
+          btnElement.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+          btnElement.style.opacity = "1";
+          btnElement.disabled = false;
+          btnElement.onclick = (e) => {
+            e.preventDefault();
+            window.open(product.product_link, '_blank');
+          };
+        }
+      } catch (error) {
+        console.error('Error generating try-on:', error);
+        showChatError(`Failed to generate try-on for ${product.brand}`);
+        loadingSpinner.classList.remove('active');
+
+        // Reset button
+        btnElement.textContent = "Retry";
+        btnElement.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+        btnElement.disabled = false;
+        btnElement.style.opacity = "1";
+      }
+    };
 
     function showChatError(errorMsg) {
       const chatMessages = document.getElementById("chat-messages");
