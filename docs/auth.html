@@ -398,27 +398,6 @@
         authLog('info', 'init', `Page URL: ${window.location.href}`);
         authLog('info', 'init', `URL params: ${window.location.search}`);
 
-        // Load Supabase credentials from backend env vars (not stored in the repo)
-        let supabase;
-        try {
-            authLog('info', 'config', `Fetching config from ${BACKEND_URL}/api/config`);
-            const configRes = await fetch(`${BACKEND_URL}/api/config`);
-            authLog('info', 'config', `Config response status: ${configRes.status}`);
-            if (!configRes.ok) throw new Error(`Config fetch failed: ${configRes.status}`);
-            const configData = await configRes.json();
-            authLog('info', 'config', `Supabase URL received: ${configData.supabase_url ? configData.supabase_url.substring(0, 30) + '...' : 'MISSING'}`);
-            authLog('info', 'config', `Supabase anon key received: ${configData.supabase_anon_key ? 'yes (' + configData.supabase_anon_key.length + ' chars)' : 'MISSING'}`);
-            supabase = createClient(configData.supabase_url, configData.supabase_anon_key);
-            authLog('info', 'config', 'Supabase client created successfully');
-        } catch (err) {
-            authLog('error', 'config', 'Failed to initialize Supabase client', err);
-            document.getElementById('signup-status').innerHTML =
-                '<div class="status-message status-error">Failed to connect to server. Please try again later.</div>';
-            document.getElementById('login-status').innerHTML =
-                '<div class="status-message status-error">Failed to connect to server. Please try again later.</div>';
-            throw err; // stop script execution
-        }
-
         const signupView = document.getElementById('signup-view');
         const loginView = document.getElementById('login-view');
         const photoUploadZone = document.getElementById('photo-upload-zone');
@@ -459,35 +438,6 @@
             signupView.classList.remove('hidden');
         });
 
-        // Redirect if already logged in
-        authLog('info', 'session', 'Checking for existing session...');
-        const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-            authLog('error', 'session', 'Error checking session', sessionError);
-        }
-        if (existingSession) {
-            authLog('info', 'session', `Existing session found for: ${existingSession.user?.email}`);
-            authLog('info', 'session', `Session expires at: ${existingSession.expires_at ? new Date(existingSession.expires_at * 1000).toISOString() : 'unknown'}`);
-            if (!isSigningUp) {
-                authLog('info', 'session', 'Redirecting to chat.html (already logged in)');
-                window.location.href = 'chat.html';
-            }
-        } else {
-            authLog('info', 'session', 'No existing session found');
-        }
-
-        // Also handle auth state changes (covers the login redirect)
-        supabase.auth.onAuthStateChange((event, session) => {
-            authLog('info', 'auth-state', `Auth state changed: event="${event}", hasSession=${!!session}, isSigningUp=${isSigningUp}`);
-            if (session) {
-                authLog('info', 'auth-state', `Session user: ${session.user?.email}`);
-            }
-            if (session && !isSigningUp) {
-                authLog('info', 'auth-state', 'Redirecting to chat.html via auth state change');
-                window.location.href = 'chat.html';
-            }
-        });
-
         // Photo Upload
         photoUploadZone.addEventListener('click', () => {
             authLog('info', 'photo', 'Photo upload zone clicked');
@@ -520,6 +470,56 @@
             photoPreview.style.display = 'none';
             photoUploadZone.style.display = 'block';
             photoInputSignup.value = '';
+        });
+
+        // Load Supabase credentials from backend env vars (not stored in the repo)
+        let supabase;
+        try {
+            authLog('info', 'config', `Fetching config from ${BACKEND_URL}/api/config`);
+            const configRes = await fetch(`${BACKEND_URL}/api/config`);
+            authLog('info', 'config', `Config response status: ${configRes.status}`);
+            if (!configRes.ok) throw new Error(`Config fetch failed: ${configRes.status}`);
+            const configData = await configRes.json();
+            authLog('info', 'config', `Supabase URL received: ${configData.supabase_url ? configData.supabase_url.substring(0, 30) + '...' : 'MISSING'}`);
+            authLog('info', 'config', `Supabase anon key received: ${configData.supabase_anon_key ? 'yes (' + configData.supabase_anon_key.length + ' chars)' : 'MISSING'}`);
+            supabase = createClient(configData.supabase_url, configData.supabase_anon_key);
+            authLog('info', 'config', 'Supabase client created successfully');
+        } catch (err) {
+            authLog('error', 'config', 'Failed to initialize Supabase client', err);
+            document.getElementById('signup-status').innerHTML =
+                '<div class="status-message status-error">Failed to connect to server. Please try again later.</div>';
+            document.getElementById('login-status').innerHTML =
+                '<div class="status-message status-error">Failed to connect to server. Please try again later.</div>';
+            throw err; // stop script execution
+        }
+
+        // Redirect if already logged in
+        authLog('info', 'session', 'Checking for existing session...');
+        const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+            authLog('error', 'session', 'Error checking session', sessionError);
+        }
+        if (existingSession) {
+            authLog('info', 'session', `Existing session found for: ${existingSession.user?.email}`);
+            authLog('info', 'session', `Session expires at: ${existingSession.expires_at ? new Date(existingSession.expires_at * 1000).toISOString() : 'unknown'}`);
+            if (!isSigningUp) {
+                authLog('info', 'session', 'Redirecting to chat.html (already logged in)');
+                window.location.href = 'chat.html';
+            }
+        } else {
+            authLog('info', 'session', 'No existing session found');
+        }
+
+        // Also handle auth state changes (covers the login redirect)
+        supabase.auth.onAuthStateChange((event, session) => {
+            authLog('info', 'auth-state', `Auth state changed: event="${event}", hasSession=${!!session}, isSigningUp=${isSigningUp}`);
+            if (session) {
+                authLog('info', 'auth-state', `Session user: ${session.user?.email}`);
+            }
+            if (session && !isSigningUp) {
+                authLog('info', 'auth-state', 'Redirecting to chat.html via auth state change');
+                window.location.href = 'chat.html';
+            }
         });
 
         // Sign Up

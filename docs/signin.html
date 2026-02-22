@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>taylor.ai - Sign In</title>
     <link rel="icon" href="visuals/favicon.png" type="image/png">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -37,9 +40,19 @@
         }
 
         @keyframes float {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(50px, -50px) scale(1.1); }
-            66% { transform: translate(-50px, 50px) scale(0.9); }
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            33% {
+                transform: translate(50px, -50px) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-50px, 50px) scale(0.9);
+            }
         }
 
         .bg-1 {
@@ -84,8 +97,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .auth-card {
@@ -169,7 +189,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: left 0.6s;
         }
 
@@ -267,6 +287,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Floating Background Elements -->
     <div class="bg-element bg-1"></div>
@@ -320,8 +341,57 @@
         authLog('info', 'init', 'Sign-in page loading...');
         authLog('info', 'init', `Page URL: ${window.location.href}`);
 
-        // Load Supabase credentials from backend
         let supabase;
+
+        // Login handler
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const statusDiv = document.getElementById('login-status');
+
+            authLog('info', 'login', `Sign-in attempt for email: ${email}`);
+            statusDiv.innerHTML = '';
+
+            if (!email || !password) {
+                authLog('warn', 'login', `Validation failed: email=${!!email}, password=${!!password}`);
+                statusDiv.innerHTML = '<div class="status-message status-error">Please enter both email and password</div>';
+                return;
+            }
+
+            if (!supabase) {
+                authLog('error', 'login', 'Supabase client not initialized');
+                statusDiv.innerHTML = '<div class="status-message status-error">System is initializing or backend is unavailable. Please try again later.</div>';
+                return;
+            }
+
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true;
+            btn.textContent = 'Signing In...';
+
+            authLog('info', 'login', 'Calling supabase.auth.signInWithPassword...');
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                authLog('error', 'login', 'Sign-in FAILED', { code: error.code, message: error.message, status: error.status });
+                const errorMsg = error.message.includes('Invalid login') ? 'Invalid email or password' : error.message;
+                statusDiv.innerHTML = `<div class="status-message status-error">${errorMsg}</div>`;
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
+            } else {
+                authLog('info', 'login', `Sign-in SUCCESS for: ${data?.user?.email}`);
+                authLog('info', 'login', `Session token received: ${data?.session ? 'yes' : 'no'}`);
+                authLog('info', 'login', 'Waiting for onAuthStateChange to handle redirect...');
+            }
+        }
+
+        document.getElementById('login-btn').addEventListener('click', handleLogin);
+        document.getElementById('login-email').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+        document.getElementById('login-password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+
+        // Load Supabase credentials from backend
         try {
             authLog('info', 'config', `Fetching config from ${BACKEND_URL}/api/config`);
             const configRes = await fetch(`${BACKEND_URL}/api/config`);
@@ -362,48 +432,7 @@
                 window.location.href = 'chat.html';
             }
         });
-
-        // Login handler
-        async function handleLogin() {
-            const email = document.getElementById('login-email').value.trim();
-            const password = document.getElementById('login-password').value;
-            const statusDiv = document.getElementById('login-status');
-
-            authLog('info', 'login', `Sign-in attempt for email: ${email}`);
-            statusDiv.innerHTML = '';
-
-            if (!email || !password) {
-                authLog('warn', 'login', `Validation failed: email=${!!email}, password=${!!password}`);
-                statusDiv.innerHTML = '<div class="status-message status-error">Please enter both email and password</div>';
-                return;
-            }
-
-            const btn = document.getElementById('login-btn');
-            btn.disabled = true;
-            btn.textContent = 'Signing In...';
-
-            authLog('info', 'login', 'Calling supabase.auth.signInWithPassword...');
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                authLog('error', 'login', 'Sign-in FAILED', { code: error.code, message: error.message, status: error.status });
-                const errorMsg = error.message.includes('Invalid login') ? 'Invalid email or password' : error.message;
-                statusDiv.innerHTML = `<div class="status-message status-error">${errorMsg}</div>`;
-                btn.disabled = false;
-                btn.textContent = 'Sign In';
-            } else {
-                authLog('info', 'login', `Sign-in SUCCESS for: ${data?.user?.email}`);
-                authLog('info', 'login', `Session token received: ${data?.session ? 'yes' : 'no'}`);
-                authLog('info', 'login', 'Waiting for onAuthStateChange to handle redirect...');
-            }
-        }
-
-        document.getElementById('login-btn').addEventListener('click', handleLogin);
-        document.getElementById('login-email').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleLogin();
-        });
-        document.getElementById('login-password').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleLogin();
-        });
     </script>
 </body>
+
 </html>
