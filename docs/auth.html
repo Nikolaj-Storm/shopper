@@ -380,14 +380,38 @@
 
         const BACKEND_URL = 'https://stylo-ai.onrender.com';
 
+        // --- AUTH LOGGING UTILITY ---
+        function authLog(level, context, message, data = null) {
+            const timestamp = new Date().toISOString();
+            const prefix = `[AUTH ${level.toUpperCase()}] [${timestamp}] [${context}]`;
+            const logEntry = data ? `${prefix} ${message}` : `${prefix} ${message}`;
+            if (level === 'error') {
+                console.error(logEntry, data || '');
+            } else if (level === 'warn') {
+                console.warn(logEntry, data || '');
+            } else {
+                console.log(logEntry, data || '');
+            }
+        }
+
+        authLog('info', 'init', 'Auth page loading...');
+        authLog('info', 'init', `Page URL: ${window.location.href}`);
+        authLog('info', 'init', `URL params: ${window.location.search}`);
+
         // Load Supabase credentials from backend env vars (not stored in the repo)
         let supabase;
         try {
+            authLog('info', 'config', `Fetching config from ${BACKEND_URL}/api/config`);
             const configRes = await fetch(`${BACKEND_URL}/api/config`);
+            authLog('info', 'config', `Config response status: ${configRes.status}`);
             if (!configRes.ok) throw new Error(`Config fetch failed: ${configRes.status}`);
-            const { supabase_url, supabase_anon_key } = await configRes.json();
-            supabase = createClient(supabase_url, supabase_anon_key);
+            const configData = await configRes.json();
+            authLog('info', 'config', `Supabase URL received: ${configData.supabase_url ? configData.supabase_url.substring(0, 30) + '...' : 'MISSING'}`);
+            authLog('info', 'config', `Supabase anon key received: ${configData.supabase_anon_key ? 'yes (' + configData.supabase_anon_key.length + ' chars)' : 'MISSING'}`);
+            supabase = createClient(configData.supabase_url, configData.supabase_anon_key);
+            authLog('info', 'config', 'Supabase client created successfully');
         } catch (err) {
+            authLog('error', 'config', 'Failed to initialize Supabase client', err);
             document.getElementById('signup-status').innerHTML =
                 '<div class="status-message status-error">Failed to connect to server. Please try again later.</div>';
             document.getElementById('login-status').innerHTML =
@@ -411,42 +435,68 @@
         // Check URL params
         const urlParams = new URLSearchParams(window.location.search);
         const mode = urlParams.get('mode');
+        authLog('info', 'routing', `Mode parameter: "${mode}"`);
         if (mode === 'signin') {
+            authLog('info', 'routing', 'Switching to sign-in view');
             signupView.classList.add('hidden');
             loginView.classList.remove('hidden');
+        } else {
+            authLog('info', 'routing', 'Showing default sign-up view');
         }
 
         // Toggle views
         document.getElementById('show-login-link').addEventListener('click', (e) => {
             e.preventDefault();
+            authLog('info', 'routing', 'User toggled to sign-in view');
             signupView.classList.add('hidden');
             loginView.classList.remove('hidden');
         });
 
         document.getElementById('show-signup-link').addEventListener('click', (e) => {
             e.preventDefault();
+            authLog('info', 'routing', 'User toggled to sign-up view');
             loginView.classList.add('hidden');
             signupView.classList.remove('hidden');
         });
 
         // Redirect if already logged in
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        if (existingSession && !isSigningUp) {
-            window.location.href = 'chat.html';
+        authLog('info', 'session', 'Checking for existing session...');
+        const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+            authLog('error', 'session', 'Error checking session', sessionError);
+        }
+        if (existingSession) {
+            authLog('info', 'session', `Existing session found for: ${existingSession.user?.email}`);
+            authLog('info', 'session', `Session expires at: ${existingSession.expires_at ? new Date(existingSession.expires_at * 1000).toISOString() : 'unknown'}`);
+            if (!isSigningUp) {
+                authLog('info', 'session', 'Redirecting to chat.html (already logged in)');
+                window.location.href = 'chat.html';
+            }
+        } else {
+            authLog('info', 'session', 'No existing session found');
         }
 
         // Also handle auth state changes (covers the login redirect)
         supabase.auth.onAuthStateChange((event, session) => {
+            authLog('info', 'auth-state', `Auth state changed: event="${event}", hasSession=${!!session}, isSigningUp=${isSigningUp}`);
+            if (session) {
+                authLog('info', 'auth-state', `Session user: ${session.user?.email}`);
+            }
             if (session && !isSigningUp) {
+                authLog('info', 'auth-state', 'Redirecting to chat.html via auth state change');
                 window.location.href = 'chat.html';
             }
         });
 
         // Photo Upload
-        photoUploadZone.addEventListener('click', () => photoInputSignup.click());
+        photoUploadZone.addEventListener('click', () => {
+            authLog('info', 'photo', 'Photo upload zone clicked');
+            photoInputSignup.click();
+        });
 
         photoInputSignup.addEventListener('change', (e) => {
             const file = e.target.files[0];
+            authLog('info', 'photo', `File selected: ${file ? file.name : 'none'}`, file ? { type: file.type, size: `${(file.size / 1024).toFixed(1)}KB` } : null);
             if (file && file.type.startsWith('image/')) {
                 uploadedPhotoFile = file;
                 const reader = new FileReader();
@@ -455,13 +505,17 @@
                     previewFilename.textContent = file.name;
                     photoPreview.style.display = 'block';
                     photoUploadZone.style.display = 'none';
+                    authLog('info', 'photo', 'Photo preview displayed');
                 };
                 reader.readAsDataURL(file);
+            } else if (file) {
+                authLog('warn', 'photo', `Invalid file type: ${file.type}`);
             }
         });
 
         document.getElementById('remove-photo-btn').addEventListener('click', (e) => {
             e.preventDefault();
+            authLog('info', 'photo', 'Photo removed by user');
             uploadedPhotoFile = null;
             photoPreview.style.display = 'none';
             photoUploadZone.style.display = 'block';
@@ -473,21 +527,26 @@
             const email = document.getElementById('signup-email').value.trim();
             const password = document.getElementById('signup-password').value;
 
+            authLog('info', 'signup', `Sign-up attempt for email: ${email}`);
             signupStatus.innerHTML = '';
 
             if (!email || !password) {
+                authLog('warn', 'signup', `Validation failed: email=${!!email}, password=${!!password}`);
                 signupStatus.innerHTML = '<div class="status-message status-error">Please enter both email and password</div>';
                 return;
             }
             if (password.length < 6) {
+                authLog('warn', 'signup', `Validation failed: password too short (${password.length} chars)`);
                 signupStatus.innerHTML = '<div class="status-message status-error">Password must be at least 6 characters</div>';
                 return;
             }
             if (!uploadedPhotoFile) {
+                authLog('warn', 'signup', 'Validation failed: no photo uploaded');
                 signupStatus.innerHTML = '<div class="status-message status-error">Please upload your photo to continue</div>';
                 return;
             }
 
+            authLog('info', 'signup', 'Validation passed, starting sign-up flow...');
             isSigningUp = true;
             signupBtn.disabled = true;
             signupBtn.textContent = 'Creating Account...';
@@ -495,53 +554,78 @@
 
             try {
                 // 1. Create auth user
+                authLog('info', 'signup', 'Step 1/4: Creating auth user via supabase.auth.signUp...');
                 const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-                if (authError) throw authError;
+                if (authError) {
+                    authLog('error', 'signup', 'supabase.auth.signUp failed', { code: authError.code, message: authError.message, status: authError.status });
+                    throw authError;
+                }
                 const user = authData.user;
+                authLog('info', 'signup', `Auth user created: id=${user?.id}, email=${user?.email}, confirmed=${user?.confirmed_at ? 'yes' : 'no'}`);
+                authLog('info', 'signup', `Auth session present: ${!!authData.session}`);
 
                 signupStatus.innerHTML = '<div class="status-message status-info">📤 Uploading your photo...</div>';
 
                 // 2. Upload photo to Supabase Storage
                 const ext = uploadedPhotoFile.name.split('.').pop() || 'jpg';
                 const storagePath = `${user.id}/${Date.now()}.${ext}`;
+                authLog('info', 'signup', `Step 2/4: Uploading photo to storage path: ${storagePath}`, { fileName: uploadedPhotoFile.name, size: `${(uploadedPhotoFile.size / 1024).toFixed(1)}KB`, type: uploadedPhotoFile.type });
                 const { error: uploadError } = await supabase.storage
                     .from('user-images')
                     .upload(storagePath, uploadedPhotoFile);
-                if (uploadError) throw uploadError;
+                if (uploadError) {
+                    authLog('error', 'signup', 'Photo upload to Supabase Storage failed', { message: uploadError.message, statusCode: uploadError.statusCode });
+                    throw uploadError;
+                }
+                authLog('info', 'signup', 'Photo uploaded successfully');
 
                 const { data: urlData } = supabase.storage
                     .from('user-images')
                     .getPublicUrl(storagePath);
                 const profileImageUrl = urlData.publicUrl;
+                authLog('info', 'signup', `Public URL generated: ${profileImageUrl}`);
 
                 signupStatus.innerHTML = '<div class="status-message status-info">🎨 Generating your reference image (30-60 sec)...</div>';
 
                 // 3. Generate reference image via backend
+                authLog('info', 'signup', `Step 3/4: Calling ${BACKEND_URL}/api/generate-reference...`);
                 const formData = new FormData();
                 formData.append('file', uploadedPhotoFile);
                 const refResponse = await fetch(`${BACKEND_URL}/api/generate-reference`, {
                     method: 'POST',
                     body: formData
                 });
+                authLog('info', 'signup', `Reference generation response: status=${refResponse.status}`);
                 if (!refResponse.ok) {
+                    const refErrorText = await refResponse.text().catch(() => 'Could not read response body');
+                    authLog('error', 'signup', `Reference generation failed: ${refResponse.status}`, { body: refErrorText });
                     throw new Error(`Reference generation failed: ${refResponse.status}`);
                 }
                 const refData = await refResponse.json();
                 const referenceImageFilename = refData.reference_image;
+                authLog('info', 'signup', `Reference image generated: ${referenceImageFilename}`);
 
                 signupStatus.innerHTML = '<div class="status-message status-info">💾 Saving your profile...</div>';
 
                 // 4. Save profile to Supabase DB
-                const { error: dbError } = await supabase.from('users').upsert({
+                authLog('info', 'signup', 'Step 4/4: Upserting user profile to DB...');
+                const profilePayload = {
                     id: user.id,
                     email: user.email,
                     profile_image_url: profileImageUrl,
                     reference_image_filename: referenceImageFilename,
                     created_at: new Date().toISOString()
-                });
-                if (dbError) throw dbError;
+                };
+                authLog('info', 'signup', 'Profile payload:', profilePayload);
+                const { error: dbError } = await supabase.from('users').upsert(profilePayload);
+                if (dbError) {
+                    authLog('error', 'signup', 'DB upsert failed', { code: dbError.code, message: dbError.message, details: dbError.details });
+                    throw dbError;
+                }
+                authLog('info', 'signup', 'Profile saved successfully');
 
                 signupStatus.innerHTML = '<div class="status-message status-success">✅ Account created successfully! Redirecting...</div>';
+                authLog('info', 'signup', 'Sign-up complete! Redirecting to chat.html in 1.5s...');
 
                 setTimeout(() => {
                     isSigningUp = false;
@@ -550,12 +634,15 @@
 
             } catch (error) {
                 isSigningUp = false;
+                authLog('error', 'signup', `Sign-up FAILED at some step`, { name: error.name, message: error.message, stack: error.stack });
 
                 let errorMsg = error.message;
                 if (errorMsg.includes('User already registered') || errorMsg.includes('already been registered')) {
                     errorMsg = 'Email already in use. Try signing in instead.';
+                    authLog('warn', 'signup', 'User already exists - suggesting sign-in');
                 } else if (errorMsg.includes('storage') || errorMsg.includes('not authorized')) {
                     errorMsg = 'Storage permission denied. Check Supabase Storage bucket policy.';
+                    authLog('error', 'signup', 'Storage permission issue detected');
                 }
 
                 signupStatus.innerHTML = `<div class="status-message status-error">❌ ${errorMsg}</div>`;
@@ -570,8 +657,10 @@
             const password = document.getElementById('login-password').value;
             const statusDiv = document.getElementById('login-status');
 
+            authLog('info', 'login', `Sign-in attempt for email: ${email}`);
             statusDiv.innerHTML = '';
             if (!email || !password) {
+                authLog('warn', 'login', `Validation failed: email=${!!email}, password=${!!password}`);
                 statusDiv.innerHTML = '<div class="status-message status-error">Please enter both email and password</div>';
                 return;
             }
@@ -580,12 +669,18 @@
             btn.disabled = true;
             btn.textContent = 'Signing In...';
 
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            authLog('info', 'login', 'Calling supabase.auth.signInWithPassword...');
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
+                authLog('error', 'login', `Sign-in FAILED`, { code: error.code, message: error.message, status: error.status });
                 const errorMsg = error.message.includes('Invalid login') ? 'Invalid email or password' : error.message;
                 statusDiv.innerHTML = `<div class="status-message status-error">${errorMsg}</div>`;
                 btn.disabled = false;
                 btn.textContent = 'Sign In';
+            } else {
+                authLog('info', 'login', `Sign-in SUCCESS for: ${data?.user?.email}`);
+                authLog('info', 'login', `Session token received: ${data?.session ? 'yes' : 'no'}`);
+                authLog('info', 'login', 'Waiting for onAuthStateChange to handle redirect...');
             }
             // On success, onAuthStateChange handles the redirect
         }

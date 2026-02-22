@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>taylor.ai - Sign In</title>
+    <link rel="icon" href="visuals/favicon.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #FAFAFA;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Floating Background Elements (matching landing page) */
+        .bg-element {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.12;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(50px, -50px) scale(1.1); }
+            66% { transform: translate(-50px, 50px) scale(0.9); }
+        }
+
+        .bg-1 {
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            top: -10%;
+            left: -10%;
+            animation-delay: 0s;
+        }
+
+        .bg-2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            bottom: -10%;
+            right: -5%;
+            animation-delay: -7s;
+        }
+
+        .auth-container {
+            max-width: 480px;
+            width: 100%;
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 400;
+            font-style: italic;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: #1a1a1a;
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .logo a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auth-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.08);
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 400;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #1a1a1a;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.01em;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            color: #1a1a1a;
+        }
+
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #1a1a1a;
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        input::placeholder {
+            color: #999;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.6s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: #1a1a1a;
+            color: white;
+            margin-top: 2rem;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .status-success {
+            background: rgba(34, 197, 94, 0.1);
+            color: #16a34a;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .status-info {
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .toggle-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .toggle-link a {
+            color: #1a1a1a;
+            font-weight: 500;
+            text-decoration: none;
+            position: relative;
+        }
+
+        .toggle-link a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: #1a1a1a;
+            transition: width 0.3s;
+        }
+
+        .toggle-link a:hover::after {
+            width: 100%;
+        }
+
+        @media (max-width: 640px) {
+            .auth-card {
+                padding: 2rem;
+            }
+
+            .logo {
+                font-size: 2rem;
+                margin-bottom: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating Background Elements -->
+    <div class="bg-element bg-1"></div>
+    <div class="bg-element bg-2"></div>
+
+    <div class="auth-container">
+        <h1 class="logo"><a href="index.html">taylor.ai</a></h1>
+
+        <div class="auth-card">
+            <h2>Welcome Back</h2>
+
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="login-email" placeholder="your@email.com">
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="login-password" placeholder="Enter your password">
+            </div>
+
+            <button id="login-btn" class="btn btn-primary">Sign In</button>
+
+            <div id="login-status"></div>
+
+            <div class="toggle-link">
+                Don't have an account?
+                <a href="auth.html?mode=signup">Sign Up</a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        const BACKEND_URL = 'https://stylo-ai.onrender.com';
+
+        // --- AUTH LOGGING UTILITY ---
+        function authLog(level, context, message, data = null) {
+            const timestamp = new Date().toISOString();
+            const prefix = `[AUTH ${level.toUpperCase()}] [${timestamp}] [${context}]`;
+            if (level === 'error') {
+                console.error(prefix, message, data || '');
+            } else if (level === 'warn') {
+                console.warn(prefix, message, data || '');
+            } else {
+                console.log(prefix, message, data || '');
+            }
+        }
+
+        authLog('info', 'init', 'Sign-in page loading...');
+        authLog('info', 'init', `Page URL: ${window.location.href}`);
+
+        // Load Supabase credentials from backend
+        let supabase;
+        try {
+            authLog('info', 'config', `Fetching config from ${BACKEND_URL}/api/config`);
+            const configRes = await fetch(`${BACKEND_URL}/api/config`);
+            authLog('info', 'config', `Config response status: ${configRes.status}`);
+            if (!configRes.ok) throw new Error(`Config fetch failed: ${configRes.status}`);
+            const configData = await configRes.json();
+            authLog('info', 'config', `Supabase URL received: ${configData.supabase_url ? configData.supabase_url.substring(0, 30) + '...' : 'MISSING'}`);
+            authLog('info', 'config', `Supabase anon key received: ${configData.supabase_anon_key ? 'yes (' + configData.supabase_anon_key.length + ' chars)' : 'MISSING'}`);
+            supabase = createClient(configData.supabase_url, configData.supabase_anon_key);
+            authLog('info', 'config', 'Supabase client created successfully');
+        } catch (err) {
+            authLog('error', 'config', 'Failed to initialize Supabase client', err);
+            document.getElementById('login-status').innerHTML =
+                '<div class="status-message status-error">Failed to connect to server. Please try again later.</div>';
+            throw err;
+        }
+
+        // Redirect if already logged in
+        authLog('info', 'session', 'Checking for existing session...');
+        const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+            authLog('error', 'session', 'Error checking session', sessionError);
+        }
+        if (existingSession) {
+            authLog('info', 'session', `Existing session found for: ${existingSession.user?.email}`);
+            authLog('info', 'session', 'Redirecting to chat.html (already logged in)');
+            window.location.href = 'chat.html';
+        } else {
+            authLog('info', 'session', 'No existing session found - showing sign-in form');
+        }
+
+        // Handle auth state changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            authLog('info', 'auth-state', `Auth state changed: event="${event}", hasSession=${!!session}`);
+            if (session) {
+                authLog('info', 'auth-state', `Session user: ${session.user?.email}`);
+                authLog('info', 'auth-state', 'Redirecting to chat.html via auth state change');
+                window.location.href = 'chat.html';
+            }
+        });
+
+        // Login handler
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const statusDiv = document.getElementById('login-status');
+
+            authLog('info', 'login', `Sign-in attempt for email: ${email}`);
+            statusDiv.innerHTML = '';
+
+            if (!email || !password) {
+                authLog('warn', 'login', `Validation failed: email=${!!email}, password=${!!password}`);
+                statusDiv.innerHTML = '<div class="status-message status-error">Please enter both email and password</div>';
+                return;
+            }
+
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true;
+            btn.textContent = 'Signing In...';
+
+            authLog('info', 'login', 'Calling supabase.auth.signInWithPassword...');
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                authLog('error', 'login', 'Sign-in FAILED', { code: error.code, message: error.message, status: error.status });
+                const errorMsg = error.message.includes('Invalid login') ? 'Invalid email or password' : error.message;
+                statusDiv.innerHTML = `<div class="status-message status-error">${errorMsg}</div>`;
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
+            } else {
+                authLog('info', 'login', `Sign-in SUCCESS for: ${data?.user?.email}`);
+                authLog('info', 'login', `Session token received: ${data?.session ? 'yes' : 'no'}`);
+                authLog('info', 'login', 'Waiting for onAuthStateChange to handle redirect...');
+            }
+        }
+
+        document.getElementById('login-btn').addEventListener('click', handleLogin);
+        document.getElementById('login-email').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+        document.getElementById('login-password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+    </script>
+</body>
+</html>

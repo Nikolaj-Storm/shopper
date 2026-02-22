@@ -5,27 +5,519 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat with taylor.ai</title>
   <link rel="icon" href="visuals/favicon.png" type="image/png">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
   <style>
     * {
-      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
+
     body {
-      background-color: #ffffff !important;
+      background: #FAFAFA;
+      color: #1a1a1a;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      position: relative;
     }
+
+    /* Floating Background Elements */
+    .bg-element {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.10;
+      animation: float 20s infinite ease-in-out;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(50px, -50px) scale(1.1); }
+      66% { transform: translate(-50px, 50px) scale(0.9); }
+    }
+
+    .bg-1 {
+      width: 600px;
+      height: 600px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      top: -15%;
+      left: -10%;
+      animation-delay: 0s;
+    }
+
+    .bg-2 {
+      width: 500px;
+      height: 500px;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      bottom: -15%;
+      right: -10%;
+      animation-delay: -7s;
+    }
+
+    .bg-3 {
+      width: 350px;
+      height: 350px;
+      background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%);
+      top: 40%;
+      right: 30%;
+      animation-delay: -14s;
+    }
+
+    /* Chat Interface Layout */
+    .chat-layout {
+      display: flex;
+      height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Chat Area (Left Panel) */
+    .chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 2rem 2rem 7rem;
+      position: relative;
+    }
+
+    /* Glass Nav Bar */
+    .chat-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+    }
+
+    .chat-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      font-style: italic;
+      color: #1a1a1a;
+      text-decoration: none;
+    }
+
+    .logout-btn {
+      padding: 0.5rem 1.25rem;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255, 255, 255, 0.9);
+      color: #1a1a1a;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Messages Container */
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+      scroll-behavior: smooth;
+    }
+
+    .messages-container::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .messages-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .messages-container::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+    }
+
+    /* Welcome Message */
+    .welcome-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .welcome-text {
+      text-align: center;
+    }
+
+    .welcome-text h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 400;
+      color: #1a1a1a;
+      margin-bottom: 0.5rem;
+    }
+
+    .welcome-text p {
+      font-size: 0.95rem;
+      color: #999;
+      font-weight: 300;
+    }
+
+    /* Message Bubbles */
     .message {
       opacity: 0;
-      transform: translateX(-30px);
-      transition: all 0.4s ease-out;
+      transform: translateY(12px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-bottom: 1rem;
     }
+
     .message.visible {
       opacity: 1;
-      transform: translateX(0);
+      transform: translateY(0);
     }
-    
-    /* Popup/Modal Styles */
+
+    .message-row {
+      display: flex;
+      margin-bottom: 0.75rem;
+    }
+
+    .message-row.user {
+      justify-content: flex-end;
+    }
+
+    .message-row.bot {
+      justify-content: flex-start;
+    }
+
+    .bubble {
+      max-width: 340px;
+      padding: 0.875rem 1.25rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .bubble.user-bubble {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-bottom-right-radius: 6px;
+    }
+
+    .bubble.bot-bubble {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      color: #1a1a1a;
+      border-bottom-left-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    }
+
+    .bubble.error-bubble {
+      background: rgba(239, 68, 68, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(239, 68, 68, 0.15);
+      color: #dc2626;
+      border-bottom-left-radius: 6px;
+    }
+
+    /* Typing Indicator */
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+      padding: 0.25rem 0;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      background: #a78bfa;
+      border-radius: 50%;
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* Photo Area (Right Panel) */
+    .photo-panel {
+      width: 38%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+      border-left: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .photo-placeholder {
+      text-align: center;
+      color: #bbb;
+    }
+
+    .photo-placeholder svg {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 0.75rem;
+      opacity: 0.4;
+    }
+
+    .photo-placeholder p {
+      font-size: 0.85rem;
+      font-weight: 300;
+    }
+
+    .loading-spinner {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-spinner.active {
+      display: flex;
+    }
+
+    .spinner-ring {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(102, 126, 234, 0.15);
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 1rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-spinner p {
+      font-size: 0.85rem;
+      color: #999;
+      font-weight: 300;
+    }
+
+    .outfits-container {
+      display: none;
+      width: 100%;
+      overflow-y: auto;
+      max-height: calc(100vh - 100px);
+      padding: 0.5rem;
+    }
+
+    .outfits-container.active {
+      display: block;
+    }
+
+    .outfits-container::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .outfits-container::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+    }
+
+    .outfit-card {
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    .outfit-card img {
+      width: 100%;
+      border-radius: 16px;
+      margin-bottom: 0.5rem;
+    }
+
+    .outfit-shop-btn {
+      display: block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-align: center;
+      padding: 0.625rem 1rem;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      letter-spacing: 0.02em;
+    }
+
+    .outfit-shop-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+
+    .user-photo {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 16px;
+      display: none;
+    }
+
+    .user-photo.active {
+      display: block;
+    }
+
+    /* Chat Input Bar */
+    .input-bar-wrapper {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 720px;
+      padding: 0 1.5rem;
+      z-index: 50;
+    }
+
+    .input-bar {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(30px) saturate(180%);
+      -webkit-backdrop-filter: blur(30px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50px;
+      padding: 0.75rem 0.75rem 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.03);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .input-bar:focus-within {
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 12px 48px rgba(102, 126, 234, 0.12), 0 0 0 1px rgba(102, 126, 234, 0.1);
+    }
+
+    .upload-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      padding: 0.35rem 0.75rem 0.35rem 0;
+      transition: color 0.3s;
+      font-size: 0.8rem;
+      font-weight: 400;
+      border-right: 1px solid rgba(0, 0, 0, 0.06);
+      margin-right: 0.75rem;
+    }
+
+    .upload-btn:hover {
+      color: #667eea;
+    }
+
+    .upload-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 0.9rem;
+      color: #1a1a1a;
+      font-weight: 300;
+    }
+
+    .chat-input::placeholder {
+      color: #bbb;
+    }
+
+    .send-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 0.5rem;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+    }
+
+    .send-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Done / View Items Button */
+    .done-button {
+      position: fixed;
+      bottom: 5.5rem;
+      right: 1.5rem;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: #667eea;
+      padding: 0.625rem 1.5rem;
+      border-radius: 50px;
+      border: 1px solid rgba(102, 126, 234, 0.2);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      letter-spacing: 0.02em;
+    }
+
+    .done-button:hover {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: transparent;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+
+    .done-button.hidden {
+      display: none;
+    }
+
+    .done-button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Modal Styles */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -33,150 +525,137 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       z-index: 1000;
       justify-content: center;
       align-items: center;
     }
-    
+
     .modal-overlay.active {
       display: flex;
     }
-    
+
     .modal-content {
-      background-color: #ffffff;
-      border-radius: 16px;
-      padding: 30px;
-      max-width: 700px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(30px) saturate(180%);
+      -webkit-backdrop-filter: blur(30px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 24px;
+      padding: 2rem;
+      max-width: 600px;
+      width: 90%;
       max-height: 80vh;
       overflow-y: auto;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-      position: relative;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
     }
-    
+
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
-      border-bottom: 2px solid #2D5A3D;
-      padding-bottom: 15px;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     }
-    
+
+    .modal-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: #1a1a1a;
+      margin: 0;
+    }
+
     .modal-close {
       background: none;
       border: none;
-      font-size: 28px;
+      font-size: 1.5rem;
       cursor: pointer;
-      color: #888;
-      padding: 0;
-      width: 30px;
-      height: 30px;
+      color: #bbb;
+      width: 32px;
+      height: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
+      border-radius: 50%;
+      transition: all 0.3s;
     }
-    
+
     .modal-close:hover {
-      color: #333;
+      background: rgba(0, 0, 0, 0.05);
+      color: #666;
     }
-    
+
     .product-item {
       display: flex;
       align-items: center;
-      padding: 15px;
-      margin-bottom: 15px;
-      border: 1px solid #e0e0e0;
-      border-radius: 12px;
-      transition: box-shadow 0.3s;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 0, 0, 0.04);
+      border-radius: 16px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    
+
     .product-item:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     }
-    
+
     .product-thumbnail {
-      width: 80px;
-      height: 80px;
+      width: 64px;
+      height: 64px;
       object-fit: cover;
-      border-radius: 8px;
-      margin-right: 15px;
+      border-radius: 12px;
+      margin-right: 1rem;
     }
-    
+
     .product-details {
       flex-grow: 1;
     }
-    
+
     .product-brand {
       font-weight: 600;
-      color: #2D5A3D;
-      margin-bottom: 5px;
+      color: #667eea;
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
     }
-    
+
     .product-link-btn {
-      background-color: #2D5A3D;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 8px 16px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-size: 14px;
-      transition: background-color 0.3s;
-      display: inline-block;
-    }
-    
-    .product-link-btn:hover {
-      background-color: #1e3d2f;
-    }
-    
-    .done-button {
-      position: fixed;
-      bottom: 90px;
-      right: 30px;
-      background: linear-gradient(135deg, #2D5A3D, #3a7254);
-      color: white;
-      padding: 12px 24px;
+      padding: 0.4rem 1rem;
       border-radius: 50px;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 600;
-      box-shadow: 0 4px 12px rgba(45, 90, 61, 0.3);
-      transition: all 0.3s;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .done-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(45, 90, 61, 0.4);
-    }
-    
-    .done-button.hidden {
-      display: none;
-    }
-    .outfit-shop-btn {
-      display: block;
-      background-color: #2D5A3D;
-      color: white;
-      text-align: center;
-      padding: 10px 16px;
-      border-radius: 8px;
       text-decoration: none;
+      font-size: 0.75rem;
       font-weight: 500;
-      font-size: 14px;
-      margin-bottom: 16px;
-      transition: background-color 0.2s;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-block;
+      letter-spacing: 0.02em;
     }
-    .outfit-shop-btn:hover {
-      background-color: #1e3d2f;
+
+    .product-link-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    /* Hidden utility */
+    .hidden {
+      display: none !important;
     }
   </style>
 </head>
 
-<body class="bg-white h-screen" style="background-color: #ffffff !important;">
-  
+<body>
+  <!-- Floating Background Elements -->
+  <div class="bg-element bg-1"></div>
+  <div class="bg-element bg-2"></div>
+  <div class="bg-element bg-3"></div>
+
   <!-- Supabase Authentication Protection -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -193,7 +672,7 @@
     } catch (err) {
       console.error('Failed to load config, redirecting to login:', err);
       window.location.href = 'index.html';
-      throw err; // stop script execution
+      throw err;
     }
 
     window.userReferenceImage = null;
@@ -201,10 +680,10 @@
     // Protect this page - check session on load
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      console.log('⚠️ No user authenticated, redirecting...');
+      console.log('No user authenticated, redirecting...');
       window.location.href = 'index.html';
     } else {
-      console.log('✅ User authenticated:', session.user.email);
+      console.log('User authenticated:', session.user.email);
 
       // Load user profile from DB
       try {
@@ -221,114 +700,115 @@
 
           const userPhoto = document.getElementById('user-photo');
           userPhoto.src = `${BACKEND_URL}/api/image/${encodeURIComponent(userData.reference_image_filename)}`;
+          userPhoto.classList.add('active');
           userPhoto.classList.remove('hidden');
           document.getElementById('photo-placeholder').style.display = 'none';
 
-          console.log('📸 User reference image loaded:', userData.reference_image_filename);
+          console.log('User reference image loaded:', userData.reference_image_filename);
         } else if (userData?.profile_image_url) {
           const userPhoto = document.getElementById('user-photo');
           userPhoto.src = userData.profile_image_url;
+          userPhoto.classList.add('active');
           userPhoto.classList.remove('hidden');
           document.getElementById('photo-placeholder').style.display = 'none';
 
-          console.log('📸 User profile image loaded (no reference yet)');
+          console.log('User profile image loaded (no reference yet)');
         }
       } catch (error) {
         console.error('Error loading user profile:', error);
       }
     }
 
-    // Redirect to login if session is lost (e.g. token expired)
+    // Redirect to login if session is lost
     supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         window.location.href = 'index.html';
       }
     });
 
-    // Logout function (called by the logout button)
+    // Logout function
     window.logout = async () => {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('❌ Logout error:', error);
+        console.error('Logout error:', error);
       } else {
-        console.log('✅ User logged out');
+        console.log('User logged out');
         window.location.href = 'index.html';
       }
     };
   </script>
 
-  <!-- Logout Button (Top Right) -->
-  <div class="fixed top-6 right-6 z-50">
-    <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition shadow-lg flex items-center space-x-2">
-      <span>Logout</span>
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-      </svg>
-    </button>
-  </div>
+  <!-- Chat Layout -->
+  <div class="chat-layout">
+    <!-- Chat Panel (Left) -->
+    <div class="chat-panel">
+      <!-- Nav -->
+      <div class="chat-nav">
+        <a href="index.html" class="chat-logo">taylor.ai</a>
+        <button onclick="logout()" class="logout-btn">
+          <span>Sign Out</span>
+          <svg fill="currentColor" viewBox="0 0 24 24" width="14" height="14">
+            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+          </svg>
+        </button>
+      </div>
 
-  <!-- Chat Interface (Always visible) -->
-  <div id="chat-interface" class="h-screen flex bg-white" style="background-color: #ffffff !important;">
-    <!-- Chat Area -->
-    <div id="chat-area" class="flex-1 p-8 flex flex-col border-r border-gray-200" style="background-color: #fafafa;">
-      <div class="flex-1 overflow-y-auto mb-6" id="chat-messages">
-        <!-- Welcome message -->
-        <div class="flex items-center justify-center h-full">
-          <div class="text-center">
-            <h1 class="text-2xl font-medium mb-2" style="color: #2D5A3D;">Ready to shop?</h1>
-            <p class="text-gray-600">Ask me anything about outfits and fashion!</p>
+      <!-- Messages -->
+      <div class="messages-container" id="chat-messages">
+        <div class="welcome-container">
+          <div class="welcome-text">
+            <h1>Ready to shop?</h1>
+            <p>Ask me anything about outfits and fashion</p>
           </div>
         </div>
       </div>
     </div>
-    
-    <!-- Photo Area -->
-    <div id="photo-area" class="w-2/5 flex flex-col items-center justify-center p-6" style="background-color: #fdfdfd;">
-      <div id="photo-placeholder" class="text-gray-500 text-lg text-center">
-        <div class="mb-4">
-          <svg class="w-16 h-16 mx-auto text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-          </svg>
-        </div>
-        <div>Your profile photo</div>
+
+    <!-- Photo Panel (Right) -->
+    <div class="photo-panel">
+      <div id="photo-placeholder" class="photo-placeholder">
+        <svg fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+        </svg>
+        <p>Your profile photo</p>
       </div>
-     
+
       <!-- Loading Spinner -->
-      <div id="loading-spinner" class="hidden flex flex-col items-center justify-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-        <div id="loading-text" class="text-gray-600 text-lg">Generating your outfit...</div>
+      <div id="loading-spinner" class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <p id="loading-text">Generating your outfit...</p>
       </div>
-     
-      <!-- Outfit Results with Shop Links -->
-      <div id="outfits-container" class="hidden w-full overflow-y-auto" style="max-height: calc(100vh - 100px);">
+
+      <!-- Outfit Results -->
+      <div id="outfits-container" class="outfits-container">
         <!-- Outfit cards injected by JS -->
       </div>
-      
+
       <!-- User Photo -->
-      <img id="user-photo" alt="Your Photo" class="max-w-full max-h-full hidden rounded-lg">
+      <img id="user-photo" alt="Your Photo" class="user-photo">
     </div>
   </div>
 
-  <!-- Chat Input Bar (Always visible at bottom) -->
-  <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-6">
-    <div class="bg-white rounded-full px-6 py-4 flex items-center border border-gray-200 shadow-lg">
-      <button id="upload-photo-btn" class="flex items-center space-x-2 text-gray-600 hover:text-green-800 transition-colors mr-4 cursor-pointer bg-transparent border-none" title="Update your try-on photo">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+  <!-- Chat Input Bar -->
+  <div class="input-bar-wrapper">
+    <div class="input-bar">
+      <button id="upload-photo-btn" class="upload-btn" title="Update your try-on photo">
+        <svg fill="currentColor" viewBox="0 0 24 24">
           <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
         </svg>
-        <span class="text-sm">Photo</span>
+        <span>Photo</span>
       </button>
       <input type="file" id="new-photo-input" accept="image/*" class="hidden">
-     
-      <input 
-        type="text" 
+
+      <input
+        type="text"
         id="chat-input"
-        placeholder="Ask taylor.ai anything..." 
-        class="flex-1 bg-transparent text-gray-900 placeholder-gray-500 outline-none text-lg"
+        class="chat-input"
+        placeholder="Ask taylor.ai anything..."
       >
-     
-      <button id="submit-btn" class="ml-4 bg-gray-200 text-gray-700 w-10 h-10 rounded-full hover:bg-gray-300 transition-colors flex items-center justify-center">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+
+      <button id="submit-btn" class="send-btn">
+        <svg fill="currentColor" viewBox="0 0 24 24">
           <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
         </svg>
       </button>
@@ -337,17 +817,17 @@
 
   <!-- Done Button -->
   <button id="done-btn" class="done-button hidden">
-    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" width="20" height="20">
+    <svg fill="currentColor" viewBox="0 0 24 24">
       <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
     </svg>
     View Items
   </button>
 
-  <!-- Modal/Popup for showing collected products -->
+  <!-- Products Modal -->
   <div id="products-modal" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 style="margin: 0; color: #2D5A3D;">Your Shopping List</h2>
+        <h2>Your Shopping List</h2>
         <button class="modal-close" onclick="closeProductsModal()">&times;</button>
       </div>
       <div id="products-list">
@@ -357,10 +837,7 @@
   </div>
 
   <script>
-    // Backend URL - update this if the backend moves
     const BACKEND_URL = 'https://stylo-ai.onrender.com';
-
-    // Track all collected products
     let collectedProducts = [];
 
     // Safely escape HTML to prevent XSS
@@ -370,147 +847,135 @@
       return div.innerHTML;
     }
 
+    // Helper: create a message row
+    function createMessageRow(type) {
+      const row = document.createElement('div');
+      row.className = `message-row ${type} message`;
+      return row;
+    }
+
+    function createBubble(type, text) {
+      const bubble = document.createElement('div');
+      bubble.className = `bubble ${type}-bubble`;
+      bubble.textContent = text;
+      return bubble;
+    }
+
     // Chat functionality
     document.getElementById("submit-btn").addEventListener("click", function() {
       const input = document.getElementById("chat-input");
       const message = input.value.trim();
-      if (message) {
-        sendChatMessage(message);
-      }
+      if (message) sendChatMessage(message);
     });
-    
+
     document.getElementById("chat-input").addEventListener("keypress", function(event) {
       if (event.key === "Enter") {
         event.preventDefault();
         const message = document.getElementById("chat-input").value.trim();
-        if (message) {
-          sendChatMessage(message);
-        }
+        if (message) sendChatMessage(message);
       }
     });
-  
+
     async function sendChatMessage(message) {
       const chatMessages = document.getElementById("chat-messages");
       const input = document.getElementById("chat-input");
       input.value = "";
-      
+
       // Clear welcome message if it exists
-      const welcomeMsg = chatMessages.querySelector('.flex.items-center.justify-center');
-      if (welcomeMsg) {
-        welcomeMsg.remove();
-      }
-      
-      // Add user message (use textContent to prevent XSS)
-      const userMsg = document.createElement("div");
-      userMsg.className = "flex justify-end mb-4 message";
-      const userBubble = document.createElement("div");
-      userBubble.className = "text-white px-4 py-3 rounded-2xl rounded-br-md max-w-xs";
-      userBubble.style.backgroundColor = "#2D5A3D";
-      userBubble.textContent = message;
-      userMsg.appendChild(userBubble);
-      chatMessages.appendChild(userMsg);
-      setTimeout(() => userMsg.classList.add("visible"), 10);
+      const welcomeMsg = chatMessages.querySelector('.welcome-container');
+      if (welcomeMsg) welcomeMsg.remove();
+
+      // Add user message
+      const userRow = createMessageRow('user');
+      userRow.appendChild(createBubble('user', message));
+      chatMessages.appendChild(userRow);
+      setTimeout(() => userRow.classList.add("visible"), 10);
       chatMessages.scrollTop = chatMessages.scrollHeight;
-      
+
       // Add typing indicator
-      const typingIndicator = document.createElement("div");
-      typingIndicator.className = "flex justify-start mb-4 message visible";
-      typingIndicator.innerHTML = `
-        <div class="bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
-          <div class="flex space-x-1">
-            <span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></span>
-            <span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay: 0.2s;"></span>
-            <span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay: 0.4s;"></span>
-          </div>
-        </div>
-      `;
-      chatMessages.appendChild(typingIndicator);
+      const typingRow = createMessageRow('bot');
+      typingRow.classList.add('visible');
+      const typingBubble = document.createElement('div');
+      typingBubble.className = 'bubble bot-bubble';
+      typingBubble.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+      typingRow.appendChild(typingBubble);
+      chatMessages.appendChild(typingRow);
       chatMessages.scrollTop = chatMessages.scrollHeight;
-      
+
       // Show loading spinner
       const loadingSpinner = document.getElementById("loading-spinner");
       const outfitsContainer = document.getElementById("outfits-container");
       const userPhoto = document.getElementById("user-photo");
 
-      userPhoto.classList.add("hidden");
-      outfitsContainer.classList.add("hidden");
-      loadingSpinner.classList.remove("hidden");
+      userPhoto.classList.remove('active');
+      userPhoto.classList.add('hidden');
+      outfitsContainer.classList.remove('active');
+      loadingSpinner.classList.add('active');
       document.getElementById('loading-text').textContent = 'Generating your outfit...';
-      
+
       try {
-        console.log('🎨 Calling /api/generate-outfit...');
-        console.log('📸 Current reference image:', window.userReferenceImage);
-        
+        console.log('Calling /api/generate-outfit...');
+        console.log('Current reference image:', window.userReferenceImage);
+
         const requestBody = {
           prompt: message,
           max_results: 2,
           reference_image: window.userReferenceImage
         };
-        
-        console.log('📤 Request body:', requestBody);
-        
+
+        console.log('Request body:', requestBody);
+
         const response = await fetch(`${BACKEND_URL}/api/generate-outfit`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody)
         });
-        
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`);
-        }
-        
+
+        if (!response.ok) throw new Error(`API returned ${response.status}`);
+
         const data = await response.json();
-        console.log('✅ Backend response:', data);
-        
-        // NEW: Collect products from the response
+        console.log('Backend response:', data);
+
+        // Collect products
         if (data.products && data.products.length > 0) {
           data.products.forEach(product => {
-            // Add each product to the collection if it's not already there
             const exists = collectedProducts.some(p => p.product_link === product.product_link);
             if (!exists) {
               collectedProducts.push({
                 brand: product.brand,
                 image_url: product.image_url,
                 product_link: product.product_link,
-                query: message // Track which query generated this product
+                query: message
               });
             }
           });
-          
-          console.log('🛍️ Total collected products:', collectedProducts.length);
-          
-          // Show the "Done" button if we have products
+
+          console.log('Total collected products:', collectedProducts.length);
+
           if (collectedProducts.length > 0) {
             document.getElementById('done-btn').classList.remove('hidden');
           }
         }
-        
+
         // Update reference image
         if (data.latest_image) {
           window.userReferenceImage = data.latest_image;
-          console.log('🔄 Updated reference image:', window.userReferenceImage);
+          console.log('Updated reference image:', window.userReferenceImage);
         }
-        
+
         // Remove typing indicator
-        typingIndicator.style.opacity = '0';
-        setTimeout(() => typingIndicator.remove(), 300);
-        
+        typingRow.style.opacity = '0';
+        setTimeout(() => typingRow.remove(), 300);
+
         // Add bot response
-        const botMsg = document.createElement("div");
-        botMsg.className = "flex justify-start mb-4 message";
-        botMsg.innerHTML = `
-          <div class="bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
-            ✨ I've generated your outfit! Check it out on the right →
-          </div>
-        `;
-        chatMessages.appendChild(botMsg);
-        setTimeout(() => botMsg.classList.add("visible"), 10);
+        const botRow = createMessageRow('bot');
+        botRow.appendChild(createBubble('bot', "I've generated your outfit! Check it out on the right."));
+        chatMessages.appendChild(botRow);
+        setTimeout(() => botRow.classList.add("visible"), 10);
         chatMessages.scrollTop = chatMessages.scrollHeight;
-        
-        // Show generated outfits with shop links
-        loadingSpinner.classList.add("hidden");
+
+        // Show generated outfits
+        loadingSpinner.classList.remove('active');
 
         if (data.generated_images && data.generated_images.length > 0) {
           outfitsContainer.innerHTML = '';
@@ -518,12 +983,11 @@
             const product = data.products && data.products[i];
 
             const card = document.createElement('div');
-            card.className = 'w-full mb-4';
+            card.className = 'outfit-card';
 
             const img = document.createElement('img');
             img.src = `${BACKEND_URL}/api/image/${encodeURIComponent(filename)}`;
             img.alt = product ? `Outfit by ${product.brand}` : 'Generated outfit';
-            img.className = 'w-full rounded-lg mb-2';
             card.appendChild(img);
 
             if (product && /^https?:\/\//.test(product.product_link)) {
@@ -532,55 +996,50 @@
               shopBtn.target = '_blank';
               shopBtn.rel = 'noopener noreferrer';
               shopBtn.className = 'outfit-shop-btn';
-              shopBtn.textContent = `Shop at ${product.brand} →`;
+              shopBtn.textContent = `Shop at ${product.brand}`;
               card.appendChild(shopBtn);
             }
 
             outfitsContainer.appendChild(card);
           });
-          outfitsContainer.classList.remove("hidden");
+          outfitsContainer.classList.add('active');
         } else {
           showChatError('No outfit generated');
         }
-        
+
       } catch (error) {
-        console.error('❌ Error:', error);
-        typingIndicator.style.opacity = '0';
-        setTimeout(() => typingIndicator.remove(), 300);
+        console.error('Error:', error);
+        typingRow.style.opacity = '0';
+        setTimeout(() => typingRow.remove(), 300);
         showChatError(`Error: ${error.message}`);
-        loadingSpinner.classList.add("hidden");
-        userPhoto.classList.remove("hidden");
+        loadingSpinner.classList.remove('active');
+        userPhoto.classList.add('active');
+        userPhoto.classList.remove('hidden');
       }
     }
-   
+
     function showChatError(errorMsg) {
       const chatMessages = document.getElementById("chat-messages");
-      const errorMsgElement = document.createElement("div");
-      errorMsgElement.className = "flex justify-start mb-4 message";
-      errorMsgElement.innerHTML = `
-        <div class="bg-red-100 text-red-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs">
-          ❌ ${errorMsg}
-        </div>
-      `;
-      chatMessages.appendChild(errorMsgElement);
-      setTimeout(() => errorMsgElement.classList.add("visible"), 10);
+      const errorRow = createMessageRow('bot');
+      errorRow.appendChild(createBubble('error', errorMsg));
+      chatMessages.appendChild(errorRow);
+      setTimeout(() => errorRow.classList.add("visible"), 10);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-    
-    // Done button functionality
+
+    // Done button
     document.getElementById('done-btn').addEventListener('click', function() {
       showProductsModal();
     });
-    
+
     function showProductsModal() {
       const modal = document.getElementById('products-modal');
       const productsList = document.getElementById('products-list');
-      
-      // Clear previous content
+
       productsList.innerHTML = '';
-      
+
       if (collectedProducts.length === 0) {
-        productsList.innerHTML = '<p style="text-align: center; color: #888;">No products collected yet. Start chatting to find items!</p>';
+        productsList.innerHTML = '<p style="text-align: center; color: #999; font-size: 0.9rem;">No products collected yet. Start chatting to find items!</p>';
       } else {
         collectedProducts.forEach((product, index) => {
           const productItem = document.createElement('div');
@@ -589,7 +1048,6 @@
           const thumb = document.createElement('img');
           thumb.className = 'product-thumbnail';
           thumb.alt = product.brand;
-          // Only allow http/https image URLs
           if (/^https?:\/\//.test(product.image_url)) {
             thumb.src = product.image_url;
           }
@@ -602,15 +1060,14 @@
           brandDiv.textContent = product.brand;
 
           const queryDiv = document.createElement('div');
-          queryDiv.style.cssText = 'color: #666; font-size: 14px; margin-bottom: 8px;';
+          queryDiv.style.cssText = 'color: #999; font-size: 0.8rem; margin-bottom: 0.5rem; font-weight: 300;';
           queryDiv.textContent = `From: "${product.query}"`;
 
           const link = document.createElement('a');
           link.className = 'product-link-btn';
           link.target = '_blank';
           link.rel = 'noopener noreferrer';
-          link.textContent = 'View Product →';
-          // Only allow http/https product links
+          link.textContent = 'View Product';
           if (/^https?:\/\//.test(product.product_link)) {
             link.href = product.product_link;
           } else {
@@ -625,20 +1082,17 @@
           productsList.appendChild(productItem);
         });
       }
-      
+
       modal.classList.add('active');
     }
-    
+
     function closeProductsModal() {
-      const modal = document.getElementById('products-modal');
-      modal.classList.remove('active');
+      document.getElementById('products-modal').classList.remove('active');
     }
-    
+
     // Close modal when clicking outside
     document.getElementById('products-modal').addEventListener('click', function(e) {
-      if (e.target === this) {
-        closeProductsModal();
-      }
+      if (e.target === this) closeProductsModal();
     });
 
     // Upload new try-on photo via + icon
@@ -656,26 +1110,22 @@
       const outfitsContainer = document.getElementById('outfits-container');
 
       // Clear welcome message if present
-      const welcomeMsg = chatMessages.querySelector('.flex.items-center.justify-center');
+      const welcomeMsg = chatMessages.querySelector('.welcome-container');
       if (welcomeMsg) welcomeMsg.remove();
 
       // Show upload message in chat
-      const uploadMsg = document.createElement('div');
-      uploadMsg.className = 'flex justify-end mb-4 message';
-      const bubble = document.createElement('div');
-      bubble.className = 'text-white px-4 py-3 rounded-2xl rounded-br-md max-w-xs';
-      bubble.style.backgroundColor = '#2D5A3D';
-      bubble.textContent = '📸 Updating photo...';
-      uploadMsg.appendChild(bubble);
-      chatMessages.appendChild(uploadMsg);
-      setTimeout(() => uploadMsg.classList.add('visible'), 10);
+      const uploadRow = createMessageRow('user');
+      uploadRow.appendChild(createBubble('user', 'Updating photo...'));
+      chatMessages.appendChild(uploadRow);
+      setTimeout(() => uploadRow.classList.add('visible'), 10);
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
       // Show loading in right panel
+      userPhoto.classList.remove('active');
       userPhoto.classList.add('hidden');
-      outfitsContainer.classList.add('hidden');
+      outfitsContainer.classList.remove('active');
       document.getElementById('photo-placeholder').style.display = 'none';
-      loadingSpinner.classList.remove('hidden');
+      loadingSpinner.classList.add('active');
       document.getElementById('loading-text').textContent = 'Processing your photo...';
 
       try {
@@ -693,28 +1143,25 @@
         window.userReferenceImage = data.reference_image;
 
         // Update right panel with new photo
-        loadingSpinner.classList.add('hidden');
+        loadingSpinner.classList.remove('active');
         userPhoto.src = `${BACKEND_URL}/api/image/${encodeURIComponent(data.reference_image)}`;
+        userPhoto.classList.add('active');
         userPhoto.classList.remove('hidden');
 
         // Success message in chat
-        const successMsg = document.createElement('div');
-        successMsg.className = 'flex justify-start mb-4 message';
-        const successBubble = document.createElement('div');
-        successBubble.className = 'bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs';
-        successBubble.textContent = '✅ Photo updated! Ready to try on new outfits.';
-        successMsg.appendChild(successBubble);
-        chatMessages.appendChild(successMsg);
-        setTimeout(() => successMsg.classList.add('visible'), 10);
+        const successRow = createMessageRow('bot');
+        successRow.appendChild(createBubble('bot', 'Photo updated! Ready to try on new outfits.'));
+        chatMessages.appendChild(successRow);
+        setTimeout(() => successRow.classList.add('visible'), 10);
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
       } catch (err) {
-        loadingSpinner.classList.add('hidden');
+        loadingSpinner.classList.remove('active');
         document.getElementById('photo-placeholder').style.display = '';
         showChatError(`Failed to update photo: ${err.message}`);
       }
 
-      e.target.value = ''; // allow re-selecting the same file
+      e.target.value = '';
     });
   </script>
 </body>
