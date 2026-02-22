@@ -95,6 +95,21 @@ async def root():
         }
     }
 
+@app.get("/api/config")
+async def get_config():
+    """Return public Supabase client configuration for the frontend"""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
+    if not supabase_url or not supabase_anon_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Supabase configuration not set in environment variables"
+        )
+    return {
+        "supabase_url": supabase_url,
+        "supabase_anon_key": supabase_anon_key
+    }
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""

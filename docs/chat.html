@@ -166,10 +166,19 @@
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
     const BACKEND_URL = 'https://stylo-ai.onrender.com';
-    const supabase = createClient(
-      'https://qvdjbfuwbrojpdspfdth.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2ZGpiZnV3YnJvanBkc3BmZHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NTUxNDgsImV4cCI6MjA4NzMzMTE0OH0.8cNrUGardn5n7S5yDj_qVF8uMQlADAVmPyIk8Nkf22g'
-    );
+
+    // Load Supabase credentials from backend env vars (not stored in the repo)
+    let supabase;
+    try {
+      const configRes = await fetch(`${BACKEND_URL}/api/config`);
+      if (!configRes.ok) throw new Error(`Config fetch failed: ${configRes.status}`);
+      const { supabase_url, supabase_anon_key } = await configRes.json();
+      supabase = createClient(supabase_url, supabase_anon_key);
+    } catch (err) {
+      console.error('Failed to load config, redirecting to login:', err);
+      window.location.href = 'index.html';
+      throw err; // stop script execution
+    }
 
     window.userReferenceImage = null;
 
