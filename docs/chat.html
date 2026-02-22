@@ -156,6 +156,22 @@
     .done-button.hidden {
       display: none;
     }
+    .outfit-shop-btn {
+      display: block;
+      background-color: #2D5A3D;
+      color: white;
+      text-align: center;
+      padding: 10px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 16px;
+      transition: background-color 0.2s;
+    }
+    .outfit-shop-btn:hover {
+      background-color: #1e3d2f;
+    }
   </style>
 </head>
 
@@ -280,12 +296,12 @@
       <!-- Loading Spinner -->
       <div id="loading-spinner" class="hidden flex flex-col items-center justify-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-        <div class="text-gray-600 text-lg">Generating your outfit...</div>
+        <div id="loading-text" class="text-gray-600 text-lg">Generating your outfit...</div>
       </div>
      
-      <!-- Generated Image -->
-      <div class="rounded-lg p-4 hidden" id="image-container" style="background-color: #fdfdfd;">
-        <img id="gemini-image" src="" alt="Generated Outfit" class="max-w-full max-h-full rounded-lg">
+      <!-- Outfit Results with Shop Links -->
+      <div id="outfits-container" class="hidden w-full overflow-y-auto" style="max-height: calc(100vh - 100px);">
+        <!-- Outfit cards injected by JS -->
       </div>
       
       <!-- User Photo -->
@@ -296,12 +312,13 @@
   <!-- Chat Input Bar (Always visible at bottom) -->
   <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-6">
     <div class="bg-white rounded-full px-6 py-4 flex items-center border border-gray-200 shadow-lg">
-      <div class="flex items-center space-x-3 text-gray-600 mr-4">
+      <button id="upload-photo-btn" class="flex items-center space-x-2 text-gray-600 hover:text-green-800 transition-colors mr-4 cursor-pointer bg-transparent border-none" title="Update your try-on photo">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
         </svg>
-        <span class="text-sm">Tools</span>
-      </div>
+        <span class="text-sm">Photo</span>
+      </button>
+      <input type="file" id="new-photo-input" accept="image/*" class="hidden">
      
       <input 
         type="text" 
@@ -412,13 +429,13 @@
       
       // Show loading spinner
       const loadingSpinner = document.getElementById("loading-spinner");
-      const imageContainer = document.getElementById("image-container");
-      const geminiImage = document.getElementById("gemini-image");
+      const outfitsContainer = document.getElementById("outfits-container");
       const userPhoto = document.getElementById("user-photo");
-      
+
       userPhoto.classList.add("hidden");
-      imageContainer.classList.add("hidden");
+      outfitsContainer.classList.add("hidden");
       loadingSpinner.classList.remove("hidden");
+      document.getElementById('loading-text').textContent = 'Generating your outfit...';
       
       try {
         console.log('🎨 Calling /api/generate-outfit...');
@@ -492,18 +509,36 @@
         setTimeout(() => botMsg.classList.add("visible"), 10);
         chatMessages.scrollTop = chatMessages.scrollHeight;
         
-        // Show generated image
+        // Show generated outfits with shop links
         loadingSpinner.classList.add("hidden");
-        
+
         if (data.generated_images && data.generated_images.length > 0) {
-          const imageUrl = `${BACKEND_URL}/api/image/${encodeURIComponent(data.generated_images[0])}`;
-          geminiImage.src = imageUrl;
-          geminiImage.onload = () => {
-            imageContainer.classList.remove("hidden");
-          };
-          geminiImage.onerror = () => {
-            showChatError('Failed to load outfit image');
-          };
+          outfitsContainer.innerHTML = '';
+          data.generated_images.forEach((filename, i) => {
+            const product = data.products && data.products[i];
+
+            const card = document.createElement('div');
+            card.className = 'w-full mb-4';
+
+            const img = document.createElement('img');
+            img.src = `${BACKEND_URL}/api/image/${encodeURIComponent(filename)}`;
+            img.alt = product ? `Outfit by ${product.brand}` : 'Generated outfit';
+            img.className = 'w-full rounded-lg mb-2';
+            card.appendChild(img);
+
+            if (product && /^https?:\/\//.test(product.product_link)) {
+              const shopBtn = document.createElement('a');
+              shopBtn.href = product.product_link;
+              shopBtn.target = '_blank';
+              shopBtn.rel = 'noopener noreferrer';
+              shopBtn.className = 'outfit-shop-btn';
+              shopBtn.textContent = `Shop at ${product.brand} →`;
+              card.appendChild(shopBtn);
+            }
+
+            outfitsContainer.appendChild(card);
+          });
+          outfitsContainer.classList.remove("hidden");
         } else {
           showChatError('No outfit generated');
         }
@@ -604,6 +639,82 @@
       if (e.target === this) {
         closeProductsModal();
       }
+    });
+
+    // Upload new try-on photo via + icon
+    document.getElementById('upload-photo-btn').addEventListener('click', function() {
+      document.getElementById('new-photo-input').click();
+    });
+
+    document.getElementById('new-photo-input').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const chatMessages = document.getElementById('chat-messages');
+      const userPhoto = document.getElementById('user-photo');
+      const loadingSpinner = document.getElementById('loading-spinner');
+      const outfitsContainer = document.getElementById('outfits-container');
+
+      // Clear welcome message if present
+      const welcomeMsg = chatMessages.querySelector('.flex.items-center.justify-center');
+      if (welcomeMsg) welcomeMsg.remove();
+
+      // Show upload message in chat
+      const uploadMsg = document.createElement('div');
+      uploadMsg.className = 'flex justify-end mb-4 message';
+      const bubble = document.createElement('div');
+      bubble.className = 'text-white px-4 py-3 rounded-2xl rounded-br-md max-w-xs';
+      bubble.style.backgroundColor = '#2D5A3D';
+      bubble.textContent = '📸 Updating photo...';
+      uploadMsg.appendChild(bubble);
+      chatMessages.appendChild(uploadMsg);
+      setTimeout(() => uploadMsg.classList.add('visible'), 10);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      // Show loading in right panel
+      userPhoto.classList.add('hidden');
+      outfitsContainer.classList.add('hidden');
+      document.getElementById('photo-placeholder').style.display = 'none';
+      loadingSpinner.classList.remove('hidden');
+      document.getElementById('loading-text').textContent = 'Processing your photo...';
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch(`${BACKEND_URL}/api/generate-reference`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+        const data = await res.json();
+
+        window.userReferenceImage = data.reference_image;
+
+        // Update right panel with new photo
+        loadingSpinner.classList.add('hidden');
+        userPhoto.src = `${BACKEND_URL}/api/image/${encodeURIComponent(data.reference_image)}`;
+        userPhoto.classList.remove('hidden');
+
+        // Success message in chat
+        const successMsg = document.createElement('div');
+        successMsg.className = 'flex justify-start mb-4 message';
+        const successBubble = document.createElement('div');
+        successBubble.className = 'bg-gray-200 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md max-w-xs';
+        successBubble.textContent = '✅ Photo updated! Ready to try on new outfits.';
+        successMsg.appendChild(successBubble);
+        chatMessages.appendChild(successMsg);
+        setTimeout(() => successMsg.classList.add('visible'), 10);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      } catch (err) {
+        loadingSpinner.classList.add('hidden');
+        document.getElementById('photo-placeholder').style.display = '';
+        showChatError(`Failed to update photo: ${err.message}`);
+      }
+
+      e.target.value = ''; // allow re-selecting the same file
     });
   </script>
 </body>
