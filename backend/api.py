@@ -85,6 +85,7 @@ async def root():
         "status": "online",
         "description": "Virtual Outfit Generator - Natural language to outfit visualizations",
         "endpoints": {
+            "GET /api/config": "Get Supabase client configuration for the frontend",
             "POST /api/generate-outfit": "Generate outfit visualizations from natural language",
             "POST /api/generate-reference": "Convert user photo to clean reference image",
             "GET /api/image/{filename}": "Retrieve a generated outfit image",
