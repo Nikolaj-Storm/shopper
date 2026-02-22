@@ -14,9 +14,8 @@ import base64
 try:
     from config import OUTPUT_IMAGE_DIR, REFERENCE_IMAGE_PATH, GEMINI_API_KEY
 except ImportError:
-    import os
     OUTPUT_IMAGE_DIR = "./generated_images"
-    REFERENCE_IMAGE_PATH = "./Images/Emmanuel_Reference.png"
+    REFERENCE_IMAGE_PATH = None
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Import our Stylo.AI functions
@@ -96,6 +95,21 @@ async def root():
         }
     }
 
+@app.get("/api/config")
+async def get_config():
+    """Return public Supabase client configuration for the frontend"""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
+    if not supabase_url or not supabase_anon_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Supabase configuration not set in environment variables"
+        )
+    return {
+        "supabase_url": supabase_url,
+        "supabase_anon_key": supabase_anon_key
+    }
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -120,18 +134,25 @@ async def generate_outfit(request: GenerateOutfitRequest):
     """
     try:
         print(f"\n🎨 Processing request: {request.prompt}")
-        # Use the provided reference_image, or fall back to the last generated image if available, or the initial reference
-        reference_image = request.reference_image or REFERENCE_IMAGE_PATH
-        if request.reference_image:  # If a reference is provided, clean and use it
+        # Resolve reference image path
+        if request.reference_image:
+            # Strip directory traversal and resolve inside generated_images dir
             cleaned_reference = Path(request.reference_image).name
-            base_dir = Path(__file__).resolve().parent  # Base directory of api.py
+            base_dir = Path(__file__).resolve().parent
             reference_image = str((base_dir / OUTPUT_IMAGE_DIR / cleaned_reference).resolve())
-            print(f"Resolved reference image path: {reference_image}")  # Debug print
-        if not os.path.exists(reference_image):
-            print(f"File exists check failed for: {reference_image}")  # Debug print
+            print(f"Resolved reference image path: {reference_image}")
+        elif REFERENCE_IMAGE_PATH and os.path.exists(REFERENCE_IMAGE_PATH):
+            reference_image = REFERENCE_IMAGE_PATH
+        else:
             raise HTTPException(
                 status_code=400,
-                detail=f"Reference image not found: {reference_image}"
+                detail="No reference image available. Please upload a photo first via /api/generate-reference."
+            )
+        if not os.path.exists(reference_image):
+            print(f"File exists check failed for: {reference_image}")
+            raise HTTPException(
+                status_code=400,
+                detail="Reference image not found. It may have been lost after a server restart. Please re-upload your photo."
             )
         # Step 1: Parse natural language query
         parsed_info = parse_natural_language_query(request.prompt)
@@ -273,24 +294,24 @@ async def generate_reference(file: UploadFile = File(...)):
         print(f" File size: {len(contents)} bytes")
         user_image = Image.open(BytesIO(contents))
         print(f" Uploaded image: {file.filename} ({user_image.size}, mode: {user_image.mode})")
-        # Load reference style image
-        reference_image_path = Path(__file__).resolve().parent.parent / "Images" / "Emmanuel_Reference.png"
-        print(f" Looking for reference at: {reference_image_path}")
-        if not reference_image_path.exists():
-            raise HTTPException(
-                status_code=404,
-                detail=f"Reference image not found at {reference_image_path}"
-            )
-        reference_image = Image.open(reference_image_path)
-        print(f" Reference image loaded: {reference_image.size}, mode: {reference_image.mode}")
-        # Create detailed prompt for Gemini to generate clean reference photo
-        prompt = """PHOTO EDITING TASK - Create a clean, professional reference photo:
+        # Load reference style image if available (optional)
+        style_reference_path = Path(__file__).resolve().parent.parent / "Images" / "Emmanuel_Reference.png"
+        style_reference_image = None
+        if style_reference_path.exists():
+            style_reference_image = Image.open(style_reference_path)
+            print(f" Reference style image loaded: {style_reference_image.size}, mode: {style_reference_image.mode}")
+        else:
+            print(f" No style reference image found at {style_reference_path}, proceeding without it")
+
+        # Create prompt for Gemini to generate clean reference photo
+        if style_reference_image:
+            prompt = """PHOTO EDITING TASK - Create a clean, professional reference photo:
 SOURCE IMAGE: First image (user's uploaded photo)
 STYLE REFERENCE: Second image (the target style to match - this is the EXACT pose you need to replicate)
 YOUR TASK:
 1. Extract the person from the first image
 2. Create a clean, professional portrait matching the EXACT style and pose of the second image:
-   -  Make Sure the background is completely white and has no shadows
+   - Make Sure the background is completely white and has no shadows
    - Person centered in frame
    - Full body visible (head to feet or at least to knees)
    - **CRITICAL: Arms must be LIFTED SLIGHTLY OUT TO THE SIDES (like an A-pose or game character reference pose)**
@@ -314,11 +335,33 @@ IMPORTANT POSE REQUIREMENTS:
 - Person should be in sharp focus
 This is for use as a reference photo for virtual try-on - the slightly lifted arm position (like a game character reference) is CRITICAL for proper clothing visualization.
 Generate this clean reference photo now with arms lifted slightly to the sides."""
+            contents = [prompt, user_image, style_reference_image]
+        else:
+            prompt = """PHOTO EDITING TASK - Create a clean, professional reference photo:
+SOURCE IMAGE: The uploaded photo of a person.
+YOUR TASK:
+1. Extract the person from the uploaded image
+2. Create a clean, professional full-body portrait:
+   - Pure white background with no shadows
+   - Person centered in frame
+   - Full body visible (head to feet or at least to knees)
+   - **CRITICAL: Arms must be LIFTED SLIGHTLY OUT TO THE SIDES (A-pose, approximately 20-30 degrees from body)**
+   - Arms extended out to sides, NOT hanging down, NOT crossed, NOT in pockets
+   - Neutral, straight-on pose facing camera directly
+   - Standing straight and upright
+   - Good lighting, professional photo quality
+   - Remove any background objects, clutter, or distractions
+   - Keep the person's clothing, face, and features exactly as they are
+   - Professional studio-quality portrait
+This is for use as a virtual try-on reference photo. The slightly lifted arm position is CRITICAL.
+Generate this clean reference photo now."""
+            contents = [prompt, user_image]
+
         print(f" Generating reference image with Gemini...")
         # Generate the clean reference image using image generation model
         response = client.models.generate_content(
             model="gemini-2.5-flash-image",
-            contents=[prompt, user_image, reference_image],
+            contents=contents,
         )
         # Process response
         image_saved = False

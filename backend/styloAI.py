@@ -327,7 +327,7 @@ def main():
         print("  --generate-all     Generate visualizations for ALL products (default: generates all found)")
         print("  --no-parse         Skip AI parsing and use query directly")
         print()
-        print("Generated images will be saved to: C:\\Users\\Rahul\\Stylo.ai\\backend\\clothing_images\\")
+        print("Generated images will be saved to: ./generated_images/")
         print()
         sys.exit(1)
     
@@ -345,13 +345,17 @@ def main():
                 print("⚠️  Invalid max-results value, using default: 2")
     
     # Get reference image
-    reference_image = r"./Images/Rahul.jpg"
+    reference_image = None
     if '--reference' in args:
         idx = args.index('--reference')
         if idx + 1 < len(args):
             reference_image = args[idx + 1]
     
     # Check if reference image exists
+    if not reference_image:
+        print("❌ No reference image provided.")
+        print("Please provide a valid reference image path with --reference <path>")
+        sys.exit(1)
     if not os.path.exists(reference_image):
         print(f"❌ Reference image not found: {reference_image}")
         print("Please provide a valid reference image path with --reference")
@@ -421,7 +425,7 @@ def main():
     print(f"{'='*70}\n")
     
     # Create output directory
-    output_dir = r"C:\Users\Rahul\Stylo.ai\backend\clothing_images"
+    output_dir = "./generated_images"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         print(f"📁 Created directory: {output_dir}\n")
@@ -457,7 +461,7 @@ def main():
     print(f"{'='*70}")
     print(f"Products Found: {len(products)}")
     print(f"Outfits Generated: {len(generated_images)}/{num_to_generate}")
-    print(f"\n📁 All images saved to: {output_dir}")
+    print(f"\n📁 All images saved to: {os.path.abspath(output_dir)}")
     print(f"\nGenerated Images:")
     for img in generated_images:
         print(f"  • {os.path.basename(img)}")
