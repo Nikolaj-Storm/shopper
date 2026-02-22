@@ -376,27 +376,13 @@
     </div>
 
     <script type="module">
-        // Backend URL - update this if the backend moves
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
         const BACKEND_URL = 'https://stylo-ai.onrender.com';
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDNs9nRygrXR0MaYosEYQeKxcpJHFgVzKo",
-            authDomain: "taylor-2680b.firebaseapp.com",
-            projectId: "taylor-2680b",
-            storageBucket: "taylor-2680b.firebasestorage.app",
-            messagingSenderId: "451921468175",
-            appId: "1:451921468175:web:6fa08eeae41caa6da1bc7a"
-        };
-
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const storage = getStorage(app);
+        const supabase = createClient(
+            'https://qvdjbfuwbrojpdspfdth.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2ZGpiZnV3YnJvanBkc3BmZHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NTUxNDgsImV4cCI6MjA4NzMzMTE0OH0.8cNrUGardn5n7S5yDj_qVF8uMQlADAVmPyIk8Nkf22g'
+        );
 
         const signupView = document.getElementById('signup-view');
         const loginView = document.getElementById('login-view');
@@ -407,7 +393,7 @@
         const previewFilename = document.getElementById('preview-filename');
         const signupBtn = document.getElementById('signup-btn');
         const signupStatus = document.getElementById('signup-status');
-        
+
         let uploadedPhotoFile = null;
         let isSigningUp = false;
 
@@ -432,16 +418,22 @@
             signupView.classList.remove('hidden');
         });
 
-        // Check if already logged in
-        onAuthStateChanged(auth, user => {
-            if (user && !isSigningUp) {
+        // Redirect if already logged in
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (existingSession && !isSigningUp) {
+            window.location.href = 'chat.html';
+        }
+
+        // Also handle auth state changes (covers the login redirect)
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session && !isSigningUp) {
                 window.location.href = 'chat.html';
             }
         });
 
         // Photo Upload
         photoUploadZone.addEventListener('click', () => photoInputSignup.click());
-        
+
         photoInputSignup.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file && file.type.startsWith('image/')) {
@@ -469,9 +461,9 @@
         signupBtn.addEventListener('click', async () => {
             const email = document.getElementById('signup-email').value.trim();
             const password = document.getElementById('signup-password').value;
-            
+
             signupStatus.innerHTML = '';
-            
+
             if (!email || !password) {
                 signupStatus.innerHTML = '<div class="status-message status-error">Please enter both email and password</div>';
                 return;
@@ -484,71 +476,77 @@
                 signupStatus.innerHTML = '<div class="status-message status-error">Please upload your photo to continue</div>';
                 return;
             }
-            
+
             isSigningUp = true;
             signupBtn.disabled = true;
             signupBtn.textContent = 'Creating Account...';
             signupStatus.innerHTML = '<div class="status-message status-info">⏳ Creating your account...</div>';
-            
+
             try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-                
+                // 1. Create auth user
+                const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+                if (authError) throw authError;
+                const user = authData.user;
+
                 signupStatus.innerHTML = '<div class="status-message status-info">📤 Uploading your photo...</div>';
-                
-                const timestamp = Date.now();
-                const fileName = `profile_${timestamp}.jpg`;
-                const storagePath = `user_images/${user.uid}/${fileName}`;
-                const storageRef = ref(storage, storagePath);
-                
-                const snapshot = await uploadBytes(storageRef, uploadedPhotoFile);
-                const profileImageUrl = await getDownloadURL(snapshot.ref);
-                
+
+                // 2. Upload photo to Supabase Storage
+                const ext = uploadedPhotoFile.name.split('.').pop() || 'jpg';
+                const storagePath = `${user.id}/${Date.now()}.${ext}`;
+                const { error: uploadError } = await supabase.storage
+                    .from('user-images')
+                    .upload(storagePath, uploadedPhotoFile);
+                if (uploadError) throw uploadError;
+
+                const { data: urlData } = supabase.storage
+                    .from('user-images')
+                    .getPublicUrl(storagePath);
+                const profileImageUrl = urlData.publicUrl;
+
                 signupStatus.innerHTML = '<div class="status-message status-info">🎨 Generating your reference image (30-60 sec)...</div>';
-                
+
+                // 3. Generate reference image via backend
                 const formData = new FormData();
                 formData.append('file', uploadedPhotoFile);
-                
                 const refResponse = await fetch(`${BACKEND_URL}/api/generate-reference`, {
                     method: 'POST',
                     body: formData
                 });
-                
                 if (!refResponse.ok) {
                     throw new Error(`Reference generation failed: ${refResponse.status}`);
                 }
-                
                 const refData = await refResponse.json();
                 const referenceImageFilename = refData.reference_image;
-                
+
                 signupStatus.innerHTML = '<div class="status-message status-info">💾 Saving your profile...</div>';
-                
-                const userDoc = {
+
+                // 4. Save profile to Supabase DB
+                const { error: dbError } = await supabase.from('users').upsert({
+                    id: user.id,
                     email: user.email,
-                    profileImageUrl: profileImageUrl,
-                    referenceImageFilename: referenceImageFilename,
-                    createdAt: new Date().toISOString()
-                };
-                
-                await setDoc(doc(db, "users", user.uid), userDoc);
-                
+                    profile_image_url: profileImageUrl,
+                    reference_image_filename: referenceImageFilename,
+                    created_at: new Date().toISOString()
+                });
+                if (dbError) throw dbError;
+
                 signupStatus.innerHTML = '<div class="status-message status-success">✅ Account created successfully! Redirecting...</div>';
-                
+
                 setTimeout(() => {
                     isSigningUp = false;
                     window.location.href = 'chat.html';
                 }, 1500);
-                
+
             } catch (error) {
                 isSigningUp = false;
-                
+
                 let errorMsg = error.message;
-                if (error.code === 'auth/email-already-in-use') {
+                if (errorMsg.includes('User already registered') || errorMsg.includes('already been registered')) {
                     errorMsg = 'Email already in use. Try signing in instead.';
-                } else if (error.code === 'storage/unauthorized') {
-                    errorMsg = 'Storage permission denied. Check Firebase rules.';
+                } else if (errorMsg.includes('storage') || errorMsg.includes('not authorized')) {
+                    errorMsg = 'Storage permission denied. Check Supabase Storage bucket policy.';
                 }
-                
+
                 signupStatus.innerHTML = `<div class="status-message status-error">❌ ${errorMsg}</div>`;
                 signupBtn.disabled = false;
                 signupBtn.textContent = 'Create Account';
@@ -560,30 +558,27 @@
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
             const statusDiv = document.getElementById('login-status');
-            
+
             statusDiv.innerHTML = '';
             if (!email || !password) {
                 statusDiv.innerHTML = '<div class="status-message status-error">Please enter both email and password</div>';
                 return;
             }
-            
+
             const btn = document.getElementById('login-btn');
             btn.disabled = true;
             btn.textContent = 'Signing In...';
-            
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (err) {
-                let errorMsg = 'Invalid email or password';
-                if (err.code === 'auth/user-not-found') errorMsg = 'No account found';
-                if (err.code === 'auth/wrong-password') errorMsg = 'Incorrect password';
-                
+
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                const errorMsg = error.message.includes('Invalid login') ? 'Invalid email or password' : error.message;
                 statusDiv.innerHTML = `<div class="status-message status-error">${errorMsg}</div>`;
                 btn.disabled = false;
                 btn.textContent = 'Sign In';
             }
+            // On success, onAuthStateChange handles the redirect
         }
-        
+
         document.getElementById('login-btn').addEventListener('click', handleLogin);
         document.getElementById('login-email').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleLogin();

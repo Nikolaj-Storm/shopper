@@ -161,82 +161,74 @@
 
 <body class="bg-white h-screen" style="background-color: #ffffff !important;">
   
-  <!-- Firebase Authentication Protection -->
+  <!-- Supabase Authentication Protection -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDNs9nRygrXR0MaYosEYQeKxcpJHFgVzKo",
-      authDomain: "taylor-2680b.firebaseapp.com",
-      projectId: "taylor-2680b",
-      storageBucket: "taylor-2680b.firebasestorage.app",
-      messagingSenderId: "451921468175",
-      appId: "1:451921468175:web:6fa08eeae41caa6da1bc7a"
-    };
+    const BACKEND_URL = 'https://stylo-ai.onrender.com';
+    const supabase = createClient(
+      'https://qvdjbfuwbrojpdspfdth.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2ZGpiZnV3YnJvanBkc3BmZHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NTUxNDgsImV4cCI6MjA4NzMzMTE0OH0.8cNrUGardn5n7S5yDj_qVF8uMQlADAVmPyIk8Nkf22g'
+    );
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // CHANGE: Attach to window to make it globally accessible
     window.userReferenceImage = null;
 
-    // Protect this page
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        console.log('⚠️ No user authenticated, redirecting...');
-        window.location.href = 'index.html';
-      } else {
-        console.log('✅ User authenticated:', user.email);
-        
-        // Load user's profile image
-        try {
-          const docRef = doc(db, "users", user.uid);
-          const docSnap = await getDoc(docRef);
-          
-          if (docSnap.exists()) {
-            const userData = docSnap.data();
-            
-            // NEW: Use reference image filename instead of profile image URL
-            if (userData.referenceImageFilename) {
-              // CHANGE: Use window.userReferenceImage
-              window.userReferenceImage = userData.referenceImageFilename;
-              
-              // Display reference image
-              const userPhoto = document.getElementById('user-photo');
-              userPhoto.src = `https://stylo-ai.onrender.com/api/image/${encodeURIComponent(userData.referenceImageFilename)}`;
-              userPhoto.classList.remove('hidden');
-              document.getElementById('photo-placeholder').style.display = 'none';
-              
-              console.log('📸 User reference image loaded:', userData.referenceImageFilename);
-            } else if (userData.profileImageUrl) {
-              // Fallback to original if no reference exists yet
-              window.userProfileImageUrl = userData.profileImageUrl;
-              
-              const userPhoto = document.getElementById('user-photo');
-              userPhoto.src = userData.profileImageUrl;
-              userPhoto.classList.remove('hidden');
-              document.getElementById('photo-placeholder').style.display = 'none';
-              
-              console.log('📸 User profile image loaded (no reference yet)');
-            }
-          }
-        } catch (error) {
-          console.error('Error loading user profile:', error);
+    // Protect this page - check session on load
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.log('⚠️ No user authenticated, redirecting...');
+      window.location.href = 'index.html';
+    } else {
+      console.log('✅ User authenticated:', session.user.email);
+
+      // Load user profile from DB
+      try {
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('reference_image_filename, profile_image_url')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (userData?.reference_image_filename) {
+          window.userReferenceImage = userData.reference_image_filename;
+
+          const userPhoto = document.getElementById('user-photo');
+          userPhoto.src = `${BACKEND_URL}/api/image/${encodeURIComponent(userData.reference_image_filename)}`;
+          userPhoto.classList.remove('hidden');
+          document.getElementById('photo-placeholder').style.display = 'none';
+
+          console.log('📸 User reference image loaded:', userData.reference_image_filename);
+        } else if (userData?.profile_image_url) {
+          const userPhoto = document.getElementById('user-photo');
+          userPhoto.src = userData.profile_image_url;
+          userPhoto.classList.remove('hidden');
+          document.getElementById('photo-placeholder').style.display = 'none';
+
+          console.log('📸 User profile image loaded (no reference yet)');
         }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+    }
+
+    // Redirect to login if session is lost (e.g. token expired)
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        window.location.href = 'index.html';
       }
     });
 
-    // Logout function
-    window.logout = () => {
-      signOut(auth).then(() => {
+    // Logout function (called by the logout button)
+    window.logout = async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('❌ Logout error:', error);
+      } else {
         console.log('✅ User logged out');
         window.location.href = 'index.html';
-      }).catch((error) => {
-        console.error('❌ Logout error:', error);
-      });
+      }
     };
   </script>
 
